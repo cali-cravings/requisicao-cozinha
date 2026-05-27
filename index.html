@@ -138,6 +138,8 @@ textarea{resize:none;line-height:1.5}
 #toast{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%) translateY(20px);background:#1a1a2e;color:#fff;padding:12px 20px;border-radius:30px;font-size:14px;font-weight:500;opacity:0;transition:opacity .2s,transform .2s;z-index:999;white-space:nowrap;pointer-events:none}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .wa-ico{width:22px;height:22px;fill:currentColor;flex-shrink:0}
+#loading-bar{display:none;position:fixed;top:0;left:0;right:0;height:3px;background:var(--or);z-index:999;animation:loadpulse 1s infinite}
+@keyframes loadpulse{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
 </style>
 </head>
 <body>
@@ -254,10 +256,28 @@ textarea{resize:none;line-height:1.5}
 
 </div>
 <div id="toast"></div>
+<div id="loading-bar"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <script>
+// ---- FIREBASE CONFIG ----
+const firebaseConfig = {
+  apiKey: "AIzaSyDbdgaIEoKn39cjju2IVP83DdP3c1Og6Oo",
+  authDomain: "cozinha-pro-194a7.firebaseapp.com",
+  databaseURL: "https://cozinha-pro-194a7-default-rtdb.firebaseio.com",
+  projectId: "cozinha-pro-194a7",
+  storageBucket: "cozinha-pro-194a7.firebasestorage.app",
+  messagingSenderId: "1062088005856",
+  appId: "1:1062088005856:web:a291533509ffebd7d45885"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const REQ_REF = db.ref('requisicoes');
+
 const WA='5547989251991';
-const KEY='cozinha_v3';
 const DB=[{"c":511,"n":"CREME DE AVELA NUTELLA","s":"ESTOQUE SECO","u":"UN"},{"c":514,"n":"ARROZ BRANCO","s":"ESTOQUE SECO","u":"UN"},{"c":516,"n":"ACUCAR REFINADO","s":"ESTOQUE SECO","u":"UN"},{"c":517,"n":"PRIME RIB","s":"ESTOQUE CARNES","u":"KG"},{"c":518,"n":"TOMAHAWK","s":"ESTOQUE CARNES","u":"KG"},{"c":519,"n":"FRALDINHA","s":"ESTOQUE CARNES","u":"KG"},{"c":521,"n":"AZEITONA VERDE S/CAROÇO","s":"ESTOQUE SECO","u":"BD"},{"c":606,"n":"FLOR DE SAL","s":"ESTOQUE SECO","u":"UN"},{"c":607,"n":"SALSA TARTUFATA NEGRA","s":"ESTOQUE FRIOS","u":"UN"},{"c":608,"n":"OVAS DE CAPELIM","s":"ESTOQUE PEIXES","u":"UN"},{"c":609,"n":"ATUM LOMBO FRESCO","s":"ESTOQUE PEIXES","u":"KG"},{"c":610,"n":"MARISCO MEIA CASCA","s":"ESTOQUE PEIXES","u":"KG"},{"c":611,"n":"SIRI CARNE","s":"ESTOQUE PEIXES","u":"KG"},{"c":612,"n":"SALMAO","s":"ESTOQUE PEIXES","u":"KG"},{"c":613,"n":"PESCADA AMARELA","s":"ESTOQUE PEIXES","u":"KG"},{"c":614,"n":"CAMARAO ROSA","s":"ESTOQUE PEIXES","u":"KG"},{"c":615,"n":"CAMARAO VANNAMEI","s":"ESTOQUE PEIXES","u":"KG"},{"c":616,"n":"OSTRA","s":"ESTOQUE PEIXES","u":"DZ"},{"c":617,"n":"OVAS PRETAS","s":"ESTOQUE PEIXES","u":"UN"},{"c":618,"n":"PASTA DE AMENDOIM","s":"ESTOQUE SECO","u":"UN"},{"c":619,"n":"SEMENTE DE CHIA","s":"ESTOQUE SECO","u":"UN"},{"c":620,"n":"CRANBERRY DESIDRATADO","s":"ESTOQUE SECO","u":"UN"},{"c":621,"n":"AVEIA FLOCOS","s":"ESTOQUE SECO","u":"UN"},{"c":623,"n":"ALHO EM PO","s":"ESTOQUE SECO","u":"UN"},{"c":624,"n":"CEBOLA EM PO","s":"ESTOQUE SECO","u":"UN"},{"c":625,"n":"COMINHO MOIDO","s":"ESTOQUE SECO","u":"UN"},{"c":626,"n":"MATCHA EM PO","s":"ESTOQUE SECO","u":"UN"},{"c":628,"n":"BACON MANTA","s":"ESTOQUE FRIOS","u":"KG"},{"c":629,"n":"PROVOLONE","s":"ESTOQUE FRIOS","u":"KG"},{"c":630,"n":"CREAM CHEESE","s":"ESTOQUE FRIOS","u":"UN"},{"c":631,"n":"TILAPIA","s":"ESTOQUE PEIXES","u":"KG"},{"c":632,"n":"MUSSARELA","s":"ESTOQUE FRIOS","u":"KG"},{"c":633,"n":"GOUDA","s":"ESTOQUE FRIOS","u":"KG"},{"c":634,"n":"CORACAO DE GALINHA","s":"ESTOQUE CARNES","u":"KG"},{"c":636,"n":"FILE COXA/SOB","s":"ESTOQUE CARNES","u":"KG"},{"c":637,"n":"PARMESAO","s":"ESTOQUE FRIOS","u":"UN"},{"c":638,"n":"MARGARINA S/SAL","s":"ESTOQUE FRIOS","u":"UN"},{"c":639,"n":"PERNIL","s":"ESTOQUE CARNES","u":"KG"},{"c":640,"n":"GORGONZOLA","s":"ESTOQUE FRIOS","u":"KG"},{"c":641,"n":"BOV CARNE MOIDA","s":"ESTOQUE CARNES","u":"KG"},{"c":642,"n":"SUI COSTELA","s":"ESTOQUE CARNES","u":"KG"},{"c":643,"n":"BOV COSTELA","s":"ESTOQUE CARNES","u":"KG"},{"c":644,"n":"MASSA FOLHADA","s":"ESTOQUE SECO","u":"UN"},{"c":645,"n":"BOV CUPIM","s":"ESTOQUE CARNES","u":"KG"},{"c":646,"n":"ACUCAR CONFEITEIRO","s":"ESTOQUE SECO","u":"UN"},{"c":647,"n":"ACUCAR GELADO","s":"ESTOQUE SECO","u":"UN"},{"c":648,"n":"CHOCOLATE EM PO","s":"ESTOQUE SECO","u":"UN"},{"c":649,"n":"BOV COSTELA RIPA","s":"ESTOQUE CARNES","u":"KG"},{"c":650,"n":"CALABRESA","s":"ESTOQUE FRIOS","u":"KG"},{"c":651,"n":"QUEIJO COALHO","s":"ESTOQUE FRIOS","u":"KG"},{"c":652,"n":"REQUEIJAO CREM CHEDDAR","s":"ESTOQUE FRIOS","u":"UN"},{"c":653,"n":"REQUEIJAO","s":"ESTOQUE FRIOS","u":"UN"},{"c":654,"n":"QUEIJO RICOTA","s":"ESTOQUE FRIOS","u":"KG"},{"c":655,"n":"ACAI","s":"ESTOQUE FRIOS","u":"UN"},{"c":656,"n":"BACON CUBOS","s":"ESTOQUE FRIOS","u":"PT"},{"c":657,"n":"CARNE DESFIADA","s":"ESTOQUE CARNES","u":"KG"},{"c":658,"n":"LINGUICA TOSCANA","s":"ESTOQUE FRIOS","u":"KG"},{"c":659,"n":"AIPIM NOISETTE","s":"ESTOQUE FRIOS","u":"KG"},{"c":660,"n":"MASSA CARACOL","s":"ESTOQUE SECO","u":"UN"},{"c":661,"n":"MILHO VERDE","s":"ESTOQUE SECO","u":"UN"},{"c":667,"n":"CAFE","s":"ESTOQUE SECO","u":"UN"},{"c":669,"n":"POLVO","s":"ESTOQUE PEIXES","u":"KG"},{"c":670,"n":"LULA EM ANEL","s":"ESTOQUE PEIXES","u":"KG"},{"c":671,"n":"ROBALO FILE","s":"ESTOQUE PEIXES","u":"KG"},{"c":676,"n":"ABOBORA","s":"HORTIFRUTTI","u":"KG"},{"c":677,"n":"ABOBRINHA VERDE","s":"HORTIFRUTTI","u":"KG"},{"c":678,"n":"ALHO","s":"HORTIFRUTTI","u":"KG"},{"c":679,"n":"CENOURA","s":"HORTIFRUTTI","u":"KG"},{"c":680,"n":"BANANA CATURRA","s":"HORTIFRUTTI","u":"KG"},{"c":681,"n":"BATATA LAVADA","s":"HORTIFRUTTI","u":"KG"},{"c":682,"n":"BATATA ROSA","s":"HORTIFRUTTI","u":"KG"},{"c":683,"n":"BATATA SALSA","s":"HORTIFRUTTI","u":"KG"},{"c":684,"n":"CEBOLA BRANCA","s":"HORTIFRUTTI","u":"KG"},{"c":685,"n":"CEBOLA ROXA","s":"HORTIFRUTTI","u":"KG"},{"c":686,"n":"GENGIBRE","s":"HORTIFRUTTI","u":"KG"},{"c":687,"n":"LARANJA PERA","s":"HORTIFRUTTI","u":"KG"},{"c":688,"n":"LIMAO TAITI","s":"HORTIFRUTTI","u":"KG"},{"c":689,"n":"LIMAO SICILIANO","s":"HORTIFRUTTI","u":"KG"},{"c":690,"n":"MACA FUJI","s":"HORTIFRUTTI","u":"KG"},{"c":691,"n":"MACA VERDE","s":"HORTIFRUTTI","u":"KG"},{"c":692,"n":"MANGA TOMY","s":"HORTIFRUTTI","u":"KG"},{"c":693,"n":"MARACUJA","s":"HORTIFRUTTI","u":"KG"},{"c":694,"n":"PEPINO JAPONES","s":"HORTIFRUTTI","u":"KG"},{"c":695,"n":"PERA ARGENTINA","s":"HORTIFRUTTI","u":"KG"},{"c":696,"n":"PIMENTA DEDO MOCA BDJ","s":"HORTIFRUTTI","u":"KG"},{"c":697,"n":"ABACAXI PEROLA","s":"HORTIFRUTTI","u":"UN"},{"c":698,"n":"ALECRIM","s":"HORTIFRUTTI","u":"UN"},{"c":699,"n":"TOMILHO","s":"HORTIFRUTTI","u":"UN"},{"c":700,"n":"HORTELA","s":"HORTIFRUTTI","u":"UN"},{"c":701,"n":"MANJERICAO","s":"HORTIFRUTTI","u":"UN"},{"c":702,"n":"SALSINHA","s":"HORTIFRUTTI","u":"UN"},{"c":703,"n":"RUCULA","s":"HORTIFRUTTI","u":"UN"},{"c":704,"n":"BROCOLIS CHINES","s":"HORTIFRUTTI","u":"UN"},{"c":705,"n":"COUVE FLOR","s":"HORTIFRUTTI","u":"UN"},{"c":706,"n":"ALFACE CRESPA","s":"HORTIFRUTTI","u":"UN"},{"c":707,"n":"ALFACE AMERICANA","s":"HORTIFRUTTI","u":"UN"},{"c":708,"n":"ALFACE ROXA","s":"HORTIFRUTTI","u":"UN"},{"c":709,"n":"MORANGO BDJ","s":"HORTIFRUTTI","u":"UN"},{"c":710,"n":"COUVE MINEIRA","s":"HORTIFRUTTI","u":"UN"},{"c":711,"n":"SALSAO","s":"HORTIFRUTTI","u":"UN"},{"c":712,"n":"CEBOLETES","s":"HORTIFRUTTI","u":"UN"},{"c":713,"n":"FIGO ROXO BDJ","s":"HORTIFRUTTI","u":"UN"},{"c":714,"n":"COGUMELO PARIS","s":"HORTIFRUTTI","u":"UN"},{"c":715,"n":"COGUMELO SHITAKE","s":"HORTIFRUTTI","u":"UN"},{"c":716,"n":"COGUMELO SHIMEJI","s":"HORTIFRUTTI","u":"UN"},{"c":717,"n":"BATATA DOCE ROXA","s":"HORTIFRUTTI","u":"KG"},{"c":718,"n":"PIMENTA CAMBUCI BDJ","s":"HORTIFRUTTI","u":"UN"},{"c":719,"n":"TOMATE ITALIANO MOLHO","s":"HORTIFRUTTI","u":"KG"},{"c":720,"n":"MIRTILO BDJ","s":"HORTIFRUTTI","u":"UN"},{"c":722,"n":"PHYSALIS","s":"HORTIFRUTTI","u":"UN"},{"c":723,"n":"AMORA","s":"HORTIFRUTTI","u":"UN"},{"c":724,"n":"MILHO BANDEJA","s":"HORTIFRUTTI","u":"UN"},{"c":725,"n":"UVA THOMPSON VERDE","s":"HORTIFRUTTI","u":"UN"},{"c":726,"n":"OVO","s":"HORTIFRUTTI","u":"UN"},{"c":727,"n":"ALHO DESCASCADO PCT","s":"HORTIFRUTTI","u":"KG"},{"c":728,"n":"ALFACE FRISEE","s":"HORTIFRUTTI","u":"UN"},{"c":729,"n":"TOMATE CEREJA","s":"HORTIFRUTTI","u":"KG"},{"c":730,"n":"BATATA DOCE","s":"HORTIFRUTTI","u":"KG"},{"c":731,"n":"UVA VITORIA ROXA","s":"HORTIFRUTTI","u":"KG"},{"c":732,"n":"LARANJA BAHIA","s":"HORTIFRUTTI","u":"KG"},{"c":733,"n":"ASPARGOS","s":"HORTIFRUTTI","u":"UN"},{"c":734,"n":"LICHIA","s":"HORTIFRUTTI","u":"KG"},{"c":736,"n":"CENOURA BABY","s":"HORTIFRUTTI","u":"UN"},{"c":738,"n":"FLOR COMESTIVEL","s":"HORTIFRUTTI","u":"UN"},{"c":740,"n":"REPOLHO VERDE","s":"HORTIFRUTTI","u":"UN"},{"c":741,"n":"REPOLHO ROXO","s":"HORTIFRUTTI","u":"UN"},{"c":742,"n":"BATATA SOUTE","s":"HORTIFRUTTI","u":"KG"},{"c":743,"n":"BANANA DA TERRA","s":"HORTIFRUTTI","u":"KG"},{"c":745,"n":"ABACATE AVOCADO","s":"HORTIFRUTTI","u":"BDJ"},{"c":746,"n":"COENTRO","s":"HORTIFRUTTI","u":"UN"},{"c":747,"n":"SALSA CRESPA","s":"HORTIFRUTTI","u":"UN"},{"c":749,"n":"ALHO PORO","s":"HORTIFRUTTI","u":"UN"},{"c":750,"n":"CAPPUCCINO","s":"ESTOQUE SECO","u":"KG"},{"c":751,"n":"CAFE GARIBALDI","s":"ESTOQUE SECO","u":"KG"},{"c":752,"n":"CHOCOLATE SUISSE","s":"ESTOQUE SECO","u":"UN"},{"c":753,"n":"CREME DE LEITE NATA","s":"ESTOQUE FRIOS","u":"UN"},{"c":754,"n":"COXINHA DA ASA","s":"ESTOQUE CARNES","u":"UN"},{"c":755,"n":"PRESUNTO PARMA","s":"ESTOQUE FRIOS","u":"UN"},{"c":756,"n":"FRUTA AMORA","s":"HORTIFRUTTI","u":"KG"},{"c":757,"n":"FRUTA MIRTILO","s":"HORTIFRUTTI","u":"KG"},{"c":758,"n":"FRUTA MORANGO","s":"HORTIFRUTTI","u":"KG"},{"c":759,"n":"BV MIOLO ALCATRA","s":"ESTOQUE CARNES","u":"KG"},{"c":760,"n":"BV FILE COSTELA","s":"ESTOQUE CARNES","u":"KG"},{"c":761,"n":"SUINO BISTECA","s":"ESTOQUE CARNES","u":"KG"},{"c":762,"n":"FILE PEITO","s":"ESTOQUE CARNES","u":"KG"},{"c":763,"n":"MANTEIGA S/SAL","s":"ESTOQUE FRIOS","u":"UN"},{"c":769,"n":"CHOCOLATE GOTAS SICAO","s":"ESTOQUE SECO","u":"PC"},{"c":770,"n":"CHOCOLATE GOTAS AO LEITE SICAO","s":"ESTOQUE SECO","u":"PC"},{"c":771,"n":"CHOCOLATE GOTAS BRANCO SICAO","s":"ESTOQUE SECO","u":"PC"},{"c":772,"n":"OVO GEMA PASTEURIZADA","s":"ESTOQUE FRIOS","u":"UN"},{"c":773,"n":"CEREJA EM CALDA","s":"ESTOQUE FRIOS","u":"UN"},{"c":774,"n":"NOZES MARIPOSA","s":"ESTOQUE SECO","u":"KG"},{"c":775,"n":"NOZES MARIPOSA QUARTZ","s":"ESTOQUE SECO","u":"KG"},{"c":776,"n":"CREME DE LEITE","s":"ESTOQUE FRIOS","u":"UN"},{"c":777,"n":"FILE MEIO PEITO","s":"ESTOQUE CARNES","u":"KG"},{"c":778,"n":"QUEIJO TIPO BRIE","s":"ESTOQUE FRIOS","u":"KG"},{"c":779,"n":"CEREJA","s":"HORTIFRUTTI","u":"UN"},{"c":780,"n":"MICRO VERDES","s":"HORTIFRUTTI","u":"UN"},{"c":785,"n":"ARROZ PARB URBANO","s":"ESTOQUE SECO","u":"UN"},{"c":787,"n":"BATATA CG 7MM","s":"ESTOQUE FRIOS","u":"KG"},{"c":788,"n":"FEIJAO CARIOCA","s":"ESTOQUE SECO","u":"UN"},{"c":789,"n":"AMIDO DE MILHO","s":"ESTOQUE SECO","u":"UN"},{"c":790,"n":"MEIO ASA","s":"ESTOQUE CARNES","u":"KG"},{"c":791,"n":"SOBREPAPETA","s":"ESTOQUE CARNES","u":"KG"},{"c":792,"n":"C BV MUSCULO","s":"ESTOQUE CARNES","u":"KG"},{"c":793,"n":"BV MOIDA","s":"ESTOQUE CARNES","u":"KG"},{"c":794,"n":"AV PEITO","s":"ESTOQUE CARNES","u":"KG"},{"c":795,"n":"COXA C/SB","s":"ESTOQUE CARNES","u":"KG"},{"c":796,"n":"LEITE INTEGRAL","s":"ESTOQUE FRIOS","u":"CX"},{"c":797,"n":"DOCE LEITE","s":"ESTOQUE SECO","u":"UN"},{"c":798,"n":"TOSCANA","s":"ESTOQUE CARNES","u":"UN"},{"c":799,"n":"TRIGO","s":"ESTOQUE SECO","u":"UN"},{"c":800,"n":"FAR PANKO TOSCANA","s":"ESTOQUE SECO","u":"UN"},{"c":801,"n":"OLEO MISTO","s":"ESTOQUE SECO","u":"UN"},{"c":802,"n":"AMORA SACO","s":"ESTOQUE SECO","u":"KG"},{"c":803,"n":"AMORA CONG","s":"ESTOQUE FRIOS","u":"KG"},{"c":804,"n":"MORANGO CONG","s":"ESTOQUE FRIOS","u":"UN"},{"c":805,"n":"FRAMBOESA CONG","s":"ESTOQUE FRIOS","u":"GR"},{"c":806,"n":"MANDIOCA","s":"ESTOQUE FRIOS","u":"UN"},{"c":807,"n":"FILE MIGNON","s":"ESTOQUE CARNES","u":"KG"},{"c":808,"n":"PICANHA","s":"ESTOQUE CARNES","u":"KG"},{"c":809,"n":"MOLHO SHOYU","s":"ESTOQUE SECO","u":"UN"},{"c":810,"n":"ESPINHACO","s":"ESTOQUE CARNES","u":"KG"},{"c":811,"n":"TOMATE PELADO","s":"ESTOQUE FRIOS","u":"UN"},{"c":813,"n":"OLEO ALGODAO","s":"ESTOQUE SECO","u":"UN"},{"c":814,"n":"SAL GROSSO","s":"ESTOQUE SECO","u":"UN"},{"c":815,"n":"FUNGHI SECO","s":"ESTOQUE SECO","u":"UN"},{"c":816,"n":"FAR PANKO","s":"ESTOQUE SECO","u":"UN"},{"c":818,"n":"VINHO BRANCO SECO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":819,"n":"VINHO TINTO SECO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":820,"n":"CASTANHA CAJU","s":"ESTOQUE SECO","u":"UN"},{"c":821,"n":"AMENDOA LAMINADA","s":"ESTOQUE SECO","u":"UN"},{"c":822,"n":"LOMBO DEF FAT","s":"ESTOQUE CARNES","u":"KG"},{"c":823,"n":"PEITO PERU","s":"ESTOQUE CARNES","u":"UN"},{"c":824,"n":"SALAME ITALIANO","s":"ESTOQUE FRIOS","u":"KG"},{"c":825,"n":"MOSTARDA AMARELA","s":"ESTOQUE FRIOS","u":"UN"},{"c":826,"n":"LEITE COCO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":827,"n":"TOMATE SECO","s":"ESTOQUE SECO","u":"UN"},{"c":828,"n":"AZEITE OLIVA","s":"ESTOQUE SECO","u":"UN"},{"c":829,"n":"QUEIJO BRIE","s":"ESTOQUE FRIOS","u":"KG"},{"c":830,"n":"PEPINO MIUDO","s":"ESTOQUE SECO","u":"UN"},{"c":831,"n":"AZEITONA","s":"ESTOQUE SECO","u":"UN"},{"c":832,"n":"QUEIJO MUSS BUFALA","s":"ESTOQUE FRIOS","u":"UN"},{"c":833,"n":"COCO RAL","s":"ESTOQUE SECO","u":"UN"},{"c":834,"n":"NOZES QUARTILHO","s":"ESTOQUE SECO","u":"UN"},{"c":835,"n":"PALMITO INT","s":"ESTOQUE FRIOS","u":"UN"},{"c":836,"n":"MOSTARDA MAILLE","s":"ESTOQUE FRIOS","u":"UN"},{"c":837,"n":"MASSA PASTEL/LASANHA","s":"ESTOQUE SECO","u":"UN"},{"c":838,"n":"FIGO VERDE CALDA","s":"ESTOQUE FRIOS","u":"UN"},{"c":839,"n":"CONF BRANCO","s":"ESTOQUE SECO","u":"UN"},{"c":840,"n":"COB GOTA BRANCO","s":"ESTOQUE SECO","u":"UN"},{"c":841,"n":"FILE SAITHE","s":"ESTOQUE PEIXES","u":"KG"},{"c":843,"n":"MIRTILO BLUBERRY CONG","s":"ESTOQUE FRIOS","u":"KG"},{"c":844,"n":"OLEO SOJA","s":"ESTOQUE SECO","u":"UN"},{"c":846,"n":"PASTA RECHEIO MORANGO","s":"ESTOQUE SECO","u":"PT"},{"c":847,"n":"PASTA RECHEIO MIRTILO","s":"ESTOQUE SECO","u":"PT"},{"c":848,"n":"PASTA RECHEIO MARACUJA","s":"ESTOQUE SECO","u":"PT"},{"c":849,"n":"ACUCAR MASCAVO","s":"ESTOQUE SECO","u":"KG"},{"c":850,"n":"CHOCOLATE GOTAS MEIO AMARGO","s":"ESTOQUE SECO","u":"PC"},{"c":851,"n":"FERMENTO QUIMICO","s":"ESTOQUE SECO","u":"UN"},{"c":852,"n":"FUBA MIMOSO","s":"ESTOQUE SECO","u":"FD"},{"c":855,"n":"NOZES PECAN","s":"ESTOQUE SECO","u":"KG"},{"c":856,"n":"CORANTE VERDE","s":"ESTOQUE SECO","u":"UN"},{"c":857,"n":"CORANTE AMARELO","s":"ESTOQUE SECO","u":"UN"},{"c":858,"n":"CORANTE VERMELHO","s":"ESTOQUE SECO","u":"UN"},{"c":859,"n":"BARRIL 30L","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":861,"n":"CHOPP HEINEKEN BARRIL","s":"ESTOQUE BEBIDAS","u":"LT"},{"c":862,"n":"APERITIVO APEROL","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":863,"n":"TEQUILA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":864,"n":"CACHACA SAGATIBA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":865,"n":"WHISKY BLACK LABEL","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":866,"n":"VODKA GREY GOOSE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":867,"n":"ABACATE","s":"HORTIFRUTTI","u":"KG"},{"c":868,"n":"PIMENTAO VERMELHO","s":"HORTIFRUTTI","u":"KG"},{"c":869,"n":"PIMENTAO AMARELO","s":"HORTIFRUTTI","u":"KG"},{"c":870,"n":"CEBOLINHA VERDE","s":"HORTIFRUTTI","u":"UN"},{"c":871,"n":"PITAYA","s":"HORTIFRUTTI","u":"KG"},{"c":872,"n":"MELANCIA","s":"HORTIFRUTTI","u":"KG"},{"c":873,"n":"TORANJA","s":"HORTIFRUTTI","u":"KG"},{"c":874,"n":"KIWI","s":"HORTIFRUTTI","u":"KG"},{"c":875,"n":"PIMENTAO VERDE","s":"HORTIFRUTTI","u":"KG"},{"c":876,"n":"TOMATE SALADA","s":"HORTIFRUTTI","u":"KG"},{"c":877,"n":"BETERRABA","s":"HORTIFRUTTI","u":"KG"},{"c":878,"n":"RADITE ROXO","s":"HORTIFRUTTI","u":"UN"},{"c":879,"n":"COGUMELO PORTO BELO","s":"HORTIFRUTTI","u":"UN"},{"c":880,"n":"ERVILHA TORTA BDJ","s":"HORTIFRUTTI","u":"UN"},{"c":881,"n":"MEL SILVESTRE","s":"HORTIFRUTTI","u":"UN"},{"c":882,"n":"MARACUJA CONG","s":"ESTOQUE FRIOS","u":"UN"},{"c":883,"n":"BERINJELA","s":"HORTIFRUTTI","u":"KG"},{"c":884,"n":"TOMATE ITALIANO","s":"HORTIFRUTTI","u":"KG"},{"c":885,"n":"CAMBUCI","s":"HORTIFRUTTI","u":"KG"},{"c":886,"n":"PIMENTA DEDO MOCA","s":"HORTIFRUTTI","u":"KG"},{"c":887,"n":"CHOPP HEINEKEN PILSEN","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":889,"n":"WHISKY JIM BEAM WHITE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":890,"n":"XAROPE CRANBERRY","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":891,"n":"XAROPE MONIN COCONUT","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":892,"n":"VERMOUTH CARPANO ROSSO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":893,"n":"ESPUMANTE CINZANO DRY","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":894,"n":"VODKA SKYY","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":895,"n":"XAROPE GENGIBRE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":896,"n":"BITTER CAMPARI","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":897,"n":"XAROPE ABACAXI","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":898,"n":"XAROPE MELANCIA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":899,"n":"XAROPE ROMA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":900,"n":"XAROPE FRAMBOESA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":901,"n":"RUM SPICED SAN BASILE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":902,"n":"RUM BRANCO SAN BASILE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":903,"n":"LICOR AMARETTO DELL ORSO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":904,"n":"NIB BITTER","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":905,"n":"VINAGRE ALCOOL","s":"ESTOQUE SECO","u":"UN"},{"c":906,"n":"PIMENTA RED TABASCO","s":"ESTOQUE SECO","u":"UN"},{"c":907,"n":"GRANOLA S/ACUCAR","s":"ESTOQUE SECO","u":"UN"},{"c":908,"n":"LEITE CONDENSADO","s":"ESTOQUE SECO","u":"UN"},{"c":909,"n":"FUBA FINO","s":"ESTOQUE SECO","u":"UN"},{"c":910,"n":"CATCHUP","s":"ESTOQUE FRIOS","u":"UN"},{"c":911,"n":"BANANA BRANCA","s":"HORTIFRUTTI","u":"KG"},{"c":912,"n":"MACA GALA","s":"HORTIFRUTTI","u":"KG"},{"c":913,"n":"MANGA PALMER","s":"HORTIFRUTTI","u":"KG"},{"c":914,"n":"PASTA RECHEIO FRUTAS AMARELAS","s":"ESTOQUE SECO","u":"PT"},{"c":915,"n":"PASTA RECHEIO AMORA","s":"ESTOQUE SECO","u":"PT"},{"c":916,"n":"COCO FLOCADO QUEIMADO","s":"ESTOQUE SECO","u":"UN"},{"c":917,"n":"FARINHA DE AMENDOAS","s":"ESTOQUE SECO","u":"PC"},{"c":918,"n":"CREME TIPO CHANTILLY","s":"ESTOQUE FRIOS","u":"UN"},{"c":919,"n":"AVELA SEM CASCA","s":"ESTOQUE SECO","u":"UN"},{"c":920,"n":"COCO EM FLOCOS","s":"ESTOQUE SECO","u":"KG"},{"c":921,"n":"AMENDOA SEM PELE FATIADA","s":"ESTOQUE SECO","u":"KG"},{"c":922,"n":"AMENDOA INTEIRA","s":"ESTOQUE SECO","u":"KG"},{"c":923,"n":"CHOCOLATE GRANULE AO LEITE","s":"ESTOQUE SECO","u":"UN"},{"c":924,"n":"CHOCOLATE GRANULE BRANCO","s":"ESTOQUE SECO","u":"PC"},{"c":925,"n":"CHOCOLATE GRANULE AMARGO 70%","s":"ESTOQUE SECO","u":"UN"},{"c":926,"n":"CONFEITE PISTACHE","s":"ESTOQUE SECO","u":"UN"},{"c":928,"n":"COCO MEDIO","s":"HORTIFRUTTI","u":"KG"},{"c":929,"n":"ALFACE LISA","s":"HORTIFRUTTI","u":"UN"},{"c":930,"n":"SALVIA","s":"HORTIFRUTTI","u":"UN"},{"c":931,"n":"MILHO ESPIGA","s":"HORTIFRUTTI","u":"UN"},{"c":936,"n":"PERU TEMP","s":"ESTOQUE FRIOS","u":"KG"},{"c":943,"n":"BATATA PALHA","s":"ESTOQUE SECO","u":"UN"},{"c":944,"n":"BISCOITO TRITURADO SABOR CHOCOLATE","s":"ESTOQUE SECO","u":"UN"},{"c":945,"n":"FARINHA TRIGO","s":"ESTOQUE SECO","u":"FD"},{"c":946,"n":"GOIABADA","s":"ESTOQUE SECO","u":"UN"},{"c":948,"n":"SAL REFINADO","s":"ESTOQUE SECO","u":"FD"},{"c":950,"n":"EXTRATO TOMATE","s":"ESTOQUE SECO","u":"UN"},{"c":951,"n":"MACARRAO ESPAGUETE","s":"ESTOQUE SECO","u":"UN"},{"c":952,"n":"POLENTINA","s":"ESTOQUE SECO","u":"UN"},{"c":955,"n":"MACARRAO GRANO DURO ESPAGUETE","s":"ESTOQUE SECO","u":"FD"},{"c":962,"n":"VODKA CIROC","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":963,"n":"WHISKY JOHNNIE WALKER GREEN LABEL","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":964,"n":"XAROPE MANGA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":965,"n":"XAROPE GRENADINE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":966,"n":"XAROPE MACA VERDE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":967,"n":"XAROPE CHA PRETO COM LIMAO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":968,"n":"XAROPE TANGERINA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":969,"n":"WHISKY RED LABEL","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":970,"n":"WHISKY BLUE LABEL","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":971,"n":"WHISKY JAPONES HIBIKI","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":972,"n":"GIN ROKU","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":973,"n":"GIN TANQUERAY","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":974,"n":"GIN BEEFEATER","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":975,"n":"VODKA ABSOLUT VANILIA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":976,"n":"WHISKY BULLEIT","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":977,"n":"TEQUILA JOSE CUERVO SILVER","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":978,"n":"LICOR COINTREAU FRANCES","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":979,"n":"VERMOUTH ROSSO SAN BASILE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":980,"n":"VERMOUTH EXTRA DRY","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":981,"n":"RUM MALIBU","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":982,"n":"GIN HENDRICKS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":983,"n":"WHISKY GLENMORANGIE 10 ANOS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":984,"n":"WHISKY MACALLAN 12 ANOS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":985,"n":"WHISKY JACK DANIELS OLD N7","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":986,"n":"WHISKY JACK DANIELS SINGLE BARREL","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":987,"n":"WHISKY CHIVAS REGAL 12 ANOS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":988,"n":"VODKA ABSOLUT","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":989,"n":"VODKA HAKU JAPONESA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":990,"n":"BITTER AROMATICO ORANGE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":991,"n":"XAROPE PURE LE FRUIT","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":992,"n":"WHISKY FIREBALL CINNAMON","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":993,"n":"JAGERMEISTER","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":994,"n":"JAGERMEISTER COLD BREW","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":995,"n":"LICOR BAILEYS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":996,"n":"CACHACA SALINAS CRISTALINA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":997,"n":"RUM BACARDI CARTA BRANCA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":998,"n":"TEQUILA DON JULIO ANEJO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":999,"n":"TEQUILA DON JULIO BLANCO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1000,"n":"LICOR SAN BASILE CAFE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1001,"n":"LICOR SAN BASILE FERNET ANDINO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1002,"n":"GIN GORDONS LONDON DRY","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1003,"n":"LICOR SAN BASILE AMARETTO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1004,"n":"COGNAC REMY MARTIN VSOP","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1005,"n":"COGNAC HENNESSY VS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1006,"n":"CACHACA WEBER HAUS 7 MADEIRAS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1007,"n":"VERMOUTH 1757 DI TORINO ROSSO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1008,"n":"RUM HAVANA CLUB 7 ANOS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1009,"n":"RUM HAVANA CLUB 3 ANOS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1010,"n":"TEQUILA JOSE CUERVO REPOSADO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1011,"n":"RUM ZACAPA 23 SOLERA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1012,"n":"SAKE AZUMA KIRIN SOFT","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1013,"n":"ACIDO CITRICO PURO","s":"ESTOQUE SECO","u":"UN"},{"c":1014,"n":"RUM BACARDI CARTA OURO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1015,"n":"LICOR STOCK CURACAU BLUE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1019,"n":"LICOR SCHLUCK PESSEGO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1020,"n":"XAROPE MARACUJA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1021,"n":"GIN SAN BASILE CLASSIC","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1022,"n":"GIN BOMBAY SAPPHIRE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1023,"n":"CACHACA GIUSEPPE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1024,"n":"XAROPE AGAVE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1025,"n":"ACUCAR CRISTAL COLORIDO VERMELHO","s":"ESTOQUE SECO","u":"UN"},{"c":1026,"n":"PISTACHE S/CASCA","s":"ESTOQUE SECO","u":"PC"},{"c":1027,"n":"GLUCOSE DE MILHO","s":"ESTOQUE SECO","u":"BD"},{"c":1028,"n":"FILE DE SALMAO","s":"ESTOQUE PEIXES","u":"KG"},{"c":1029,"n":"FILE DE TILAPIA","s":"ESTOQUE PEIXES","u":"KG"},{"c":1030,"n":"OSTRA FRESCA","s":"ESTOQUE PEIXES","u":"DZ"},{"c":1031,"n":"FERMENTO BIOLOG SECO","s":"ESTOQUE SECO","u":"UN"},{"c":1032,"n":"RECHEIO FORNO PISTACHE","s":"ESTOQUE SECO","u":"UN"},{"c":1033,"n":"CRAVO DA INDIA","s":"ESTOQUE SECO","u":"UN"},{"c":1034,"n":"CANELA PO","s":"ESTOQUE SECO","u":"UN"},{"c":1035,"n":"RECHEIO FORNO AVELA","s":"ESTOQUE SECO","u":"UN"},{"c":1036,"n":"MARSHMALLOW","s":"ESTOQUE SECO","u":"PC"},{"c":1037,"n":"CONFETE MINI COLORIDO","s":"ESTOQUE SECO","u":"PC"},{"c":1038,"n":"CORANTE HIDROSSOLUVEL VERMELHO","s":"ESTOQUE SECO","u":"UN"},{"c":1041,"n":"COCO AUTENTICOCO","s":"ESTOQUE SECO","u":"CX"},{"c":1046,"n":"PISCO ACHOLADO BARSOL","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1047,"n":"BACON FAT","s":"ESTOQUE FRIOS","u":"KG"},{"c":1048,"n":"QUEIJO MUSSARELA FAT","s":"ESTOQUE FRIOS","u":"KG"},{"c":1049,"n":"QUEIJO G.PADANO NERO","s":"ESTOQUE FRIOS","u":"KG"},{"c":1050,"n":"OLEO GERGELIM TORRADO","s":"ESTOQUE SECO","u":"UN"},{"c":1066,"n":"FARINHA MILHO MEDIA","s":"ESTOQUE SECO","u":"UN"},{"c":1067,"n":"FARINHA ROSCA","s":"ESTOQUE SECO","u":"KG"},{"c":1068,"n":"FEIJAO PRETO","s":"ESTOQUE SECO","u":"UN"},{"c":1069,"n":"GERGELIM PRETO TOSCANA","s":"ESTOQUE SECO","u":"UN"},{"c":1070,"n":"LEMON PEPPER","s":"ESTOQUE SECO","u":"UN"},{"c":1071,"n":"LOURO EM FOLHAS","s":"ESTOQUE SECO","u":"UN"},{"c":1072,"n":"MOSTARDA SACHE","s":"ESTOQUE SECO","u":"CX"},{"c":1073,"n":"CATCHUP SACHE","s":"ESTOQUE SECO","u":"UN"},{"c":1074,"n":"MAIONESE SACHE","s":"ESTOQUE SECO","u":"UN"},{"c":1075,"n":"ACUCAR SACHE","s":"ESTOQUE SECO","u":"UN"},{"c":1076,"n":"NOZ MOSCADA PO","s":"ESTOQUE SECO","u":"UN"},{"c":1077,"n":"OLEO GERGELIM","s":"ESTOQUE SECO","u":"UN"},{"c":1078,"n":"PIMENTA PRETA EM GRAO","s":"ESTOQUE SECO","u":"UN"},{"c":1079,"n":"PAPRICA DOCE","s":"ESTOQUE SECO","u":"UN"},{"c":1080,"n":"PAPRICA DEFUMADA","s":"ESTOQUE SECO","u":"UN"},{"c":1081,"n":"ACAFRAO DA TERRA","s":"ESTOQUE SECO","u":"UN"},{"c":1082,"n":"ACUCAR DEMERARA","s":"ESTOQUE SECO","u":"UN"},{"c":1083,"n":"LEITE PO INST","s":"ESTOQUE SECO","u":"UN"},{"c":1084,"n":"CURRY","s":"ESTOQUE SECO","u":"UN"},{"c":1086,"n":"GOIABADA CASCAO","s":"ESTOQUE SECO","u":"UN"},{"c":1089,"n":"GRAPEFRUIT DESIDRATADA","s":"ESTOQUE FRIOS","u":"PACOTE"},{"c":1090,"n":"ABACAXI DESIDRATADO","s":"ESTOQUE FRIOS","u":"PACOTE"},{"c":1091,"n":"MANGA DESIDRATADA","s":"ESTOQUE FRIOS","u":"PACOTE"},{"c":1092,"n":"LIMAO TAHITI DESIDRATADO","s":"ESTOQUE FRIOS","u":"PACOTE"},{"c":1094,"n":"MEXILHAO MEIA CONCHA","s":"ESTOQUE PEIXES","u":"KG"},{"c":1095,"n":"LEITE CONDENSADO INTEGRAL","s":"ESTOQUE SECO","u":"PC"},{"c":1096,"n":"GELATINA SEM SABOR","s":"ESTOQUE SECO","u":"PC"},{"c":1097,"n":"COCO UMIDO ADOCADO","s":"ESTOQUE SECO","u":"PC"},{"c":1098,"n":"NEGRESCO TRITURADO","s":"ESTOQUE SECO","u":"PC"},{"c":1099,"n":"CHOCOLATE COBERTURA CHIPS AO LEITE","s":"ESTOQUE SECO","u":"PC"},{"c":1100,"n":"CHOCOLATE COBERTURA GOTAS MEIO AMARGO","s":"ESTOQUE SECO","u":"UN"},{"c":1101,"n":"DOCE DE LEITE BALDE","s":"ESTOQUE SECO","u":"UN"},{"c":1102,"n":"FERMENTO BIOLOGICO MASSA DOCE","s":"ESTOQUE SECO","u":"UN"},{"c":1103,"n":"FLOCOS CROCANTES OVOMALTINE","s":"ESTOQUE SECO","u":"PC"},{"c":1104,"n":"PLACAS DE WAFER","s":"ESTOQUE SECO","u":"CX"},{"c":1105,"n":"PASTA SABORIZANTE PISTACHE","s":"ESTOQUE SECO","u":"UN"},{"c":1106,"n":"PASTA SABORIZANTE AVELA","s":"ESTOQUE SECO","u":"UN"},{"c":1107,"n":"GOIABADA BLOCO","s":"ESTOQUE SECO","u":"CX"},{"c":1109,"n":"CHOCOLATE POWER BALL MICRO AO LEITE","s":"ESTOQUE SECO","u":"PC"},{"c":1110,"n":"ACIDO CITRICO","s":"ESTOQUE SECO","u":"UN"},{"c":1111,"n":"GOMA AGAR-AGAR","s":"ESTOQUE SECO","u":"PT"},{"c":1112,"n":"PASTA SABORIZANTE BAUNILHA","s":"ESTOQUE SECO","u":"UN"},{"c":1113,"n":"CARLEX SPRAY","s":"ESTOQUE SECO","u":"UN"},{"c":1114,"n":"PACOCA ROLHA","s":"ESTOQUE SECO","u":"UN"},{"c":1115,"n":"ADOCANTE SACHE","s":"ESTOQUE SECO","u":"CX"},{"c":1116,"n":"ESSENCIA DE BAUNILHA","s":"ESTOQUE SECO","u":"UN"},{"c":1118,"n":"CORN FLAKES NATURAL","s":"ESTOQUE SECO","u":"PC"},{"c":1119,"n":"CORN FLAKES SUGAR","s":"ESTOQUE SECO","u":"PC"},{"c":1123,"n":"LOMBO DE ATUM RESFRIADO","s":"ESTOQUE PEIXES","u":"KG"},{"c":1124,"n":"FILE DE ROBALO","s":"ESTOQUE PEIXES","u":"KG"},{"c":1125,"n":"MASSA SEMOLA PENNE","s":"ESTOQUE SECO","u":"UN"},{"c":1126,"n":"MASSA SEMOLA ESPAGUETE","s":"ESTOQUE SECO","u":"UN"},{"c":1128,"n":"GELO ROCKS","s":"ESTOQUE BEBIDAS","u":"PCT"},{"c":1129,"n":"TORTILLA TRIGO","s":"ESTOQUE SECO","u":"CX"},{"c":1130,"n":"MASSA DE MILHO AMARELO","s":"ESTOQUE SECO","u":"CX"},{"c":1131,"n":"CANELA CASCA","s":"ESTOQUE SECO","u":"UN"},{"c":1132,"n":"BOMBOM OURO BRANCO","s":"ESTOQUE SECO","u":"UN"},{"c":1133,"n":"ACUCAR CRISTAL","s":"ESTOQUE SECO","u":"FD"},{"c":1134,"n":"BOMBOM SONHO DE VALSA","s":"ESTOQUE SECO","u":"UN"},{"c":1135,"n":"CAFE CABOCLO","s":"ESTOQUE SECO","u":"UN"},{"c":1136,"n":"BICARBONATO DE SODIO","s":"ESTOQUE SECO","u":"UN"},{"c":1137,"n":"CHANTILLY","s":"ESTOQUE FRIOS","u":"LT"},{"c":1138,"n":"MAIONESE HELLMANNS","s":"ESTOQUE FRIOS","u":"UN"},{"c":1139,"n":"MACARRAO OVOS","s":"ESTOQUE SECO","u":"FD"},{"c":1140,"n":"CHOCO BALL MICRO AO LEITE/BRANCO","s":"ESTOQUE SECO","u":"UN"},{"c":1141,"n":"CHOCO GIROS COLORIDO","s":"ESTOQUE SECO","u":"UN"},{"c":1142,"n":"BOV CONG DENVER STEAK","s":"ESTOQUE CARNES","u":"GR"},{"c":1143,"n":"BOV CONG FRALDAO","s":"ESTOQUE CARNES","u":"KG"},{"c":1144,"n":"SUCO CONCENTRADO MARACUJA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1145,"n":"VINAGRE BALSAMICO","s":"ESTOQUE SECO","u":"UN"},{"c":1146,"n":"ALCAPARRA","s":"ESTOQUE SECO","u":"UN"},{"c":1147,"n":"ALCACHOFRA CORACAO","s":"ESTOQUE SECO","u":"LA"},{"c":1148,"n":"GERGELIM BRANCO S/CASCA","s":"ESTOQUE SECO","u":"UN"},{"c":1149,"n":"AZEITE SACHE","s":"ESTOQUE SECO","u":"CX"},{"c":1150,"n":"OVOMALTINE FLOCOS","s":"ESTOQUE SECO","u":"UN"},{"c":1151,"n":"BISCOITO TRITURADO NEGRESCO","s":"ESTOQUE SECO","u":"UN"},{"c":1152,"n":"FARINHA MILHO BIJU FLOCADA","s":"ESTOQUE SECO","u":"FD"},{"c":1153,"n":"ERVAS FINAS","s":"ESTOQUE SECO","u":"UN"},{"c":1154,"n":"ACAFRAO TOSCANA","s":"ESTOQUE SECO","u":"UN"},{"c":1155,"n":"CREME CROCANTE OVOMALTINE","s":"ESTOQUE SECO","u":"UN"},{"c":1156,"n":"AMENDOIM METADES","s":"ESTOQUE SECO","u":"UN"},{"c":1157,"n":"OREGANO","s":"ESTOQUE SECO","u":"UN"},{"c":1158,"n":"PIMENTA CALABRESA","s":"ESTOQUE SECO","u":"UN"},{"c":1159,"n":"CHIMICHURRI","s":"ESTOQUE SECO","u":"UN"},{"c":1160,"n":"EMUSTAB DR SELECTA","s":"ESTOQUE SECO","u":"UN"},{"c":1161,"n":"PIMENTA MOIDA PURA","s":"ESTOQUE SECO","u":"UN"},{"c":1162,"n":"POLENTA SINHA","s":"ESTOQUE SECO","u":"FD"},{"c":1163,"n":"PAPRICA PICANTE","s":"ESTOQUE SECO","u":"UN"},{"c":1164,"n":"CASTANHA DO PARA","s":"ESTOQUE SECO","u":"UN"},{"c":1167,"n":"CHOPP HEINEKEN BARRIL 50L","s":"ESTOQUE BEBIDAS","u":"BR"},{"c":1168,"n":"CHOPP LAGUNITAS IPA BARRIL","s":"ESTOQUE BEBIDAS","u":"BR"},{"c":1250,"n":"FARINHA DE MANDIOCA","s":"ESTOQUE SECO","u":"FD"},{"c":1252,"n":"ACUCAR DIAMANTINO","s":"ESTOQUE SECO","u":"KG"},{"c":1253,"n":"CHOCOLATE GOTAS BRANCO CALLEBAUT","s":"ESTOQUE SECO","u":"PC"},{"c":1254,"n":"PALMITO PICADO EM CONSERVA","s":"ESTOQUE SECO","u":"VD"},{"c":1255,"n":"CHOCOLATE GOTAS AMARGO CALLEBAUT","s":"ESTOQUE SECO","u":"PC"},{"c":1259,"n":"BITTER SAN BASILE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1260,"n":"WHISKY WILD TURKEY 101","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1261,"n":"LICOR STOCK PEACH","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1263,"n":"QUEIJO GOUDA REDONDO","s":"ESTOQUE FRIOS","u":"KG"},{"c":1264,"n":"XAROPE MONIN CURACAU BLUE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1268,"n":"ARROZ ARBORIO","s":"ESTOQUE SECO","u":"UN"},{"c":1269,"n":"LICOR SAN BASILE TRIPLE SEC","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1270,"n":"DAMASCO SECO","s":"ESTOQUE SECO","u":"UN"},{"c":1272,"n":"CRAKER PERSONALIZADO DRINKS","s":"ESTOQUE BEBIDAS","u":"PACOTE"},{"c":1273,"n":"GRAPEFRUIT MEIA LUA DESIDRATADA","s":"ESTOQUE BEBIDAS","u":"PACOTE"},{"c":1278,"n":"SUCO DE LARANJA INTEGRAL","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1287,"n":"BISCOITO MAISENA","s":"ESTOQUE SECO","u":"UN"},{"c":1288,"n":"MELADO DE CANA","s":"ESTOQUE SECO","u":"UN"},{"c":1289,"n":"CHOCOLATE LACTA BIS","s":"ESTOQUE SECO","u":"UN"},{"c":1290,"n":"BOBINA PICOTADA 7KG","s":"DESCARTAVEIS","u":"UN"},{"c":1295,"n":"SEMOLINA","s":"ESTOQUE SECO","u":"PT"},{"c":1296,"n":"PIMENTA BRANCA GRAO","s":"ESTOQUE SECO","u":"PT"},{"c":1297,"n":"FUMACA LIQUIDA","s":"ESTOQUE SECO","u":"UN"},{"c":1556,"n":"ALBUMINA","s":"ESTOQUE SECO","u":"KG"},{"c":1560,"n":"ST PIERRE GINGER LATA","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1570,"n":"SORVETE","s":"ESTOQUE FRIOS","u":"PT"},{"c":1572,"n":"MOLHO TARE","s":"ESTOQUE SECO","u":"UN"},{"c":1579,"n":"TOMATE CEREJA BDJ","s":"HORTIFRUTTI","u":"UN"},{"c":1580,"n":"BROTO ALFAFA BDJ","s":"HORTIFRUTTI","u":"UN"},{"c":1582,"n":"PRESUNTO FATIADO","s":"ESTOQUE FRIOS","u":"KG"},{"c":1583,"n":"PAO DE QUEIJO","s":"ESTOQUE FRIOS","u":"UN"},{"c":1591,"n":"IOGURTE GREGO","s":"ESTOQUE FRIOS","u":"UN"},{"c":1592,"n":"ALFACE MINI","s":"HORTIFRUTTI","u":"UN"},{"c":1596,"n":"PACOTE GELO CUBO 3KG","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1597,"n":"VINHO ALMADEN BRANCO 5L","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1600,"n":"VODKA SMIRNOFF","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1601,"n":"SMIRNOFF ICE TRADICIONAL","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1602,"n":"LARANJA MEIA LUA DESIDRATADA","s":"ESTOQUE BEBIDAS","u":"PACOTE"},{"c":1604,"n":"XAROPE MONIN MORANGO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1611,"n":"FIO 50M","s":"UTENSILIO","u":"ROLO"},{"c":1612,"n":"MEXEDOR DRINK CRISTAL 240","s":"UTENSILIO","u":"PACOTE"},{"c":1613,"n":"BANDEJA HF 20UN","s":"UTENSILIO","u":"PACOTE"},{"c":1614,"n":"ETIQUETAS","s":"UTENSILIO","u":"UN"},{"c":1615,"n":"PIMENTOES COLORIDOS","s":"HORTIFRUTTI","u":"KG"},{"c":1616,"n":"AVOCADO BABY","s":"HORTIFRUTTI","u":"PACOTE"},{"c":1621,"n":"CAFE PILAO GRAOS EXPRESSO 1KG","s":"ESTOQUE SECO","u":"UN"},{"c":1622,"n":"VINHO GARAFAO TINTO SECO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1623,"n":"LEITE ZERO LACTOSE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1624,"n":"BATATA EM FLOCOS 1KG","s":"ESTOQUE SECO","u":"UN"},{"c":1625,"n":"GELEIA BRILHO","s":"ESTOQUE SECO","u":"UN"},{"c":1626,"n":"MACARRAO PENNE","s":"ESTOQUE SECO","u":"CX"},{"c":1635,"n":"MENTA","s":"HORTIFRUTTI","u":"UN"},{"c":1638,"n":"GIN NIB ORIGINAL 5L","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1639,"n":"GIN NIB ORIGINAL 1L","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1642,"n":"CATUPIRY TRADICIONAL","s":"ESTOQUE FRIOS","u":"UN"},{"c":1643,"n":"MOLHO INGLES","s":"ESTOQUE SECO","u":"UN"},{"c":1644,"n":"ALHO EM FLOCOS KG","s":"ESTOQUE SECO","u":"UN"},{"c":1645,"n":"XAROPE PERA WILLIANS","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1646,"n":"GRANITO","s":"ESTOQUE CARNES","u":"KG"},{"c":1653,"n":"NATA POTE","s":"ESTOQUE FRIOS","u":"PT"},{"c":1655,"n":"MIX AMORA E MORANGO","s":"HORTIFRUTTI","u":"UN"},{"c":1676,"n":"NIB BITTER CHOCOLATE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1681,"n":"LICOR BALLENA MORANGO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1682,"n":"LICOR 43 CHOCOLATE","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1685,"n":"LARANJA COM CHOCOLATE DESIDRATADA","s":"ESTOQUE BEBIDAS","u":"PACOTE"},{"c":1704,"n":"MOLHO DE PIMENTA","s":"ESTOQUE SECO","u":"KG"},{"c":1705,"n":"PIMENTA JALAPENO","s":"HORTIFRUTTI","u":"KG"},{"c":1707,"n":"VINAGRE DE VINHO BRANCO","s":"ESTOQUE SECO","u":"LT"},{"c":1708,"n":"MEL DE LARANJEIRA","s":"ESTOQUE SECO","u":"KG"},{"c":1709,"n":"PIMENTA ROSA","s":"HORTIFRUTTI","u":"KG"},{"c":1710,"n":"MOSTARDA DIJON","s":"ESTOQUE SECO","u":"KG"},{"c":1711,"n":"VINAGRE DE MACA","s":"ESTOQUE SECO","u":"LT"},{"c":1712,"n":"LOMBO SUINO","s":"ESTOQUE CARNES","u":"KG"},{"c":1713,"n":"SUCO DE ABACAXI","s":"ESTOQUE BEBIDAS","u":"LT"},{"c":1715,"n":"GLACE","s":"ESTOQUE SECO","u":"KG"},{"c":1716,"n":"APARAS DE CARNE","s":"ESTOQUE CARNES","u":"KG"},{"c":1721,"n":"GOMA XANTANA","s":"ESTOQUE SECO","u":"KG"},{"c":1722,"n":"ZIMBRO","s":"ESTOQUE SECO","u":"KG"},{"c":1723,"n":"COENTRO EM GRAO","s":"ESTOQUE SECO","u":"KG"},{"c":1724,"n":"PIMENTA CAIENA","s":"ESTOQUE SECO","u":"KG"},{"c":1727,"n":"BATATA MONALISA","s":"HORTIFRUTTI","u":"KG"},{"c":1728,"n":"PEITO BOVINO","s":"ESTOQUE CARNES","u":"KG"},{"c":1729,"n":"IOGURTE NATURAL","s":"ESTOQUE FRIOS","u":"KG"},{"c":1731,"n":"CREME CULINARIO","s":"ESTOQUE SECO","u":"KG"},{"c":1732,"n":"PAO FATIADO","s":"ESTOQUE SECO","u":"KG"},{"c":1733,"n":"CAPIM LIMAO","s":"HORTIFRUTTI","u":"KG"},{"c":1736,"n":"CHOPP BLUE MOON BARRIL","s":"ESTOQUE BEBIDAS","u":"BR"},{"c":1737,"n":"LICOR SAN BASILE ALKERMES","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1738,"n":"LICOR SAN BASILE AMARO","s":"ESTOQUE BEBIDAS","u":"UN"},{"c":1744,"n":"STINCO DO CORDEIRO","s":"ESTOQUE CARNES","u":"KG"},{"c":1746,"n":"MAMAO FORMOSA","s":"HORTIFRUTTI","u":"KG"},{"c":1747,"n":"MELAO","s":"HORTIFRUTTI","u":"KG"},{"c":1760,"n":"OVO BANDEIJA","s":"HORTIFRUTTI","u":"UN"},{"c":1763,"n":"CARNE SECA","s":"ESTOQUE CARNES","u":"KG"},{"c":1765,"n":"FARINHA DE TRIGO PASTA FRESCA","s":"ESTOQUE SECO","u":"KG"},{"c":1766,"n":"BERGAMOTA","s":"HORTIFRUTTI","u":"KG"},{"c":1780,"n":"CAPA CONTRA FILE","s":"ESTOQUE CARNES","u":"KG"},{"c":1782,"n":"UVA PASSAS BRANCA","s":"HORTIFRUTTI","u":"UN"},{"c":1805,"n":"QUEIJO EMENTHAL","s":"ESTOQUE FRIOS","u":"KG"},{"c":1807,"n":"FARINHA DE PISTACHE","s":"ESTOQUE SECO","u":"KG"},{"c":1810,"n":"CAMARAO CINZA","s":"ESTOQUE PEIXES","u":"KG"},{"c":1822,"n":"CARVAO ATIVADO EM PO","s":"ESTOQUE SECO","u":"KG"}];
 const CAT={'ESTOQUE SECO':{cls:'tag-coz',lb:'Cozinha'},'ESTOQUE FRIOS':{cls:'tag-coz',lb:'Cozinha'},'ESTOQUE CARNES':{cls:'tag-coz',lb:'Cozinha'},'ESTOQUE PEIXES':{cls:'tag-coz',lb:'Cozinha'},'HORTIFRUTTI':{cls:'tag-coz',lb:'Cozinha'},'ESTOQUE BEBIDAS':{cls:'tag-bar',lb:'Bar'},'UTENSILIO':{cls:'tag-coz',lb:'Cozinha'},'DESCARTAVEIS':{cls:'tag-coz',lb:'Cozinha'}};
 
@@ -278,9 +298,42 @@ function searchDB(q){
 }
 
 let urgency='m', itemCount=0, currentDetail=null, editingId=null;
+let allReqs=[]; // cache local atualizado pelo Firebase
 
-function load(){try{return JSON.parse(localStorage.getItem(KEY))||[];}catch{return[];}}
-function save(d){localStorage.setItem(KEY,JSON.stringify(d));}
+// ---- FIREBASE LISTENER ----
+function initFirebase(){
+  showLoading(true);
+  REQ_REF.orderByChild('ts').on('value', snap=>{
+    allReqs=[];
+    snap.forEach(child=>{
+      allReqs.unshift({fbKey:child.key,...child.val()});
+    });
+    showLoading(false);
+    renderHome();
+  }, err=>{
+    showLoading(false);
+    toast('Erro de conexão ⚠️');
+  });
+}
+
+function showLoading(show){
+  const el=document.getElementById('loading-bar');
+  if(el) el.style.display=show?'block':'none';
+}
+
+// ---- SAVE / UPDATE / DELETE via Firebase ----
+function saveReq(req){
+  const {fbKey,...data}=req;
+  if(fbKey){
+    REQ_REF.child(fbKey).update(data);
+  } else {
+    REQ_REF.push(data);
+  }
+}
+
+function deleteFromFB(fbKey){
+  REQ_REF.child(fbKey).remove();
+}
 
 // ---- NAV ----
 function goTo(id){
@@ -288,35 +341,39 @@ function goTo(id){
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
   if(id==='s-home') renderHome();
-  if(id==='s-form') initForm();
+  if(id==='s-form' && !editingId) initForm();
 }
 
 // ---- TOAST ----
 function toast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2600);
+  setTimeout(()=>t.classList.remove('show'),2800);
 }
 
 // ---- HOME ----
 function renderHome(){
-  const all=load();
   const today=new Date().toDateString();
-  document.getElementById('cnt-p').textContent=all.filter(r=>r.status==='pending').length;
-  document.getElementById('cnt-s').textContent=all.filter(r=>r.status==='sent'&&new Date(r.ts).toDateString()===today).length;
+  document.getElementById('cnt-p').textContent=allReqs.filter(r=>r.status==='pending').length;
+  document.getElementById('cnt-s').textContent=allReqs.filter(r=>r.status==='sent'&&new Date(r.ts).toDateString()===today).length;
   const list=document.getElementById('req-list');
-  if(!all.length){list.innerHTML='<div class="empty"><i class="ti ti-clipboard-list"></i>Nenhuma requisição ainda.<br>Crie a primeira!</div>';return;}
+  if(!allReqs.length){
+    list.innerHTML='<div class="empty"><i class="ti ti-clipboard-list"></i>Nenhuma requisição ainda.<br>Crie a primeira!</div>';
+    return;
+  }
   const stMap={pending:{cls:'bp',lb:'Pendente'},sent:{cls:'bs',lb:'Enviada'},delivered:{cls:'bd',lb:'Entregue'}};
-  list.innerHTML=all.slice(0,20).map(r=>{
+  list.innerHTML=allReqs.map(r=>{
     const st=stMap[r.status]||stMap.sent;
     const ub=r.urgency==='a'?'<span class="badge ba">🔴 Alta</span>':'<span class="badge '+st.cls+'">'+st.lb+'</span>';
-    return '<div class="ri" onclick="openDetail('+r.id+')"><div class="rico '+(r.status==='delivered'?'s':r.status==='pending'?'p':'s')+'">'+(r.status==='pending'?'⏳':r.status==='delivered'?'📦':'✅')+'</div><div class="rm"><div class="rt">'+r.setor+'</div><div class="rs">'+r.nome+' · '+fmtTs(r.ts)+' · '+r.items.length+' item'+(r.items.length>1?'s':'')+'</div></div>'+ub+'</div>';
+    const ico=r.status==='pending'?'⏳':r.status==='delivered'?'📦':'✅';
+    const cls=r.status==='pending'?'p':'s';
+    return '<div class="ri" onclick="openDetail(''+r.fbKey+'')"><div class="rico '+cls+'">'+ico+'</div><div class="rm"><div class="rt">'+r.setor+'</div><div class="rs">'+r.nome+' · '+fmtTs(r.ts)+' · '+r.items.length+' item'+(r.items.length>1?'s':'')+'</div></div>'+ub+'</div>';
   }).join('');
 }
 
 // ---- DETAIL ----
-function openDetail(id){
-  currentDetail=load().find(r=>r.id===id);
+function openDetail(fbKey){
+  currentDetail=allReqs.find(r=>r.fbKey===fbKey);
   if(!currentDetail) return;
   document.getElementById('d-setor').textContent=currentDetail.setor;
   document.getElementById('d-date').textContent=fmtTs(currentDetail.ts);
@@ -344,7 +401,7 @@ function row(k,v){return '<div class="dr"><span class="dk">'+k+'</span><span cla
 
 function deleteReq(){
   if(!currentDetail||!confirm('Excluir esta requisição?')) return;
-  save(load().filter(r=>r.id!==currentDetail.id));
+  deleteFromFB(currentDetail.fbKey);
   toast('Excluída ✓'); goTo('s-home');
 }
 
@@ -353,8 +410,7 @@ function reenviarWA(){if(currentDetail) openWA(currentDetail);}
 // ---- EDIT ----
 function editReq(){
   if(!currentDetail) return;
-  editingId=currentDetail.id;
-  // go to form without calling initForm (which resets editingId)
+  editingId=currentDetail.fbKey;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('s-form').classList.add('active');
   window.scrollTo(0,0);
@@ -382,31 +438,10 @@ function editReq(){
   });
 }
 
-function updateReq(items,status){
-  const all=load();
-  const idx=all.findIndex(r=>r.id===editingId);
-  if(idx>=0){
-    all[idx]={...all[idx],
-      setor:document.getElementById('f-setor').value,
-      nome:document.getElementById('f-nome').value.trim()||'Não informado',
-      urgency,
-      origem:document.getElementById('f-origem').value||'—',
-      destino:document.getElementById('f-destino').value||'—',
-      dataEntrega:document.getElementById('f-data').value,
-      obs:document.getElementById('f-obs').value.trim(),
-      items,status
-    };
-    save(all);
-  }
-  editingId=null;
-}
-
 // ---- DELIVERED ----
 function markDelivered(){
   if(!currentDetail||currentDetail.status==='delivered') return;
-  const all=load();
-  const idx=all.findIndex(r=>r.id===currentDetail.id);
-  if(idx>=0){all[idx].status='delivered';save(all);currentDetail.status='delivered';}
+  REQ_REF.child(currentDetail.fbKey).update({status:'delivered'});
   const bd=document.getElementById('btn-delivered');
   if(bd){bd.className='btn-delivered done';bd.innerHTML='<i class="ti ti-check"></i> Entregue';}
   const be=document.getElementById('btn-edit');
@@ -446,7 +481,7 @@ function exportExcel(){
 
 // ---- FORM ----
 function initForm(){
-  if(editingId) return; // don't reset if editing
+  editingId=null;
   itemCount=0;
   document.querySelector('#s-form .htxt h1').textContent='Nova requisição';
   const bsd=document.getElementById('btn-save-draft');if(bsd) bsd.textContent='Salvar como rascunho';
@@ -461,10 +496,8 @@ function initForm(){
 function addItem(){
   itemCount++;
   const card=document.createElement('div');
-  card.className='item-card';
-  card.id='ic'+itemCount;
-  const nameRow=document.createElement('div');
-  nameRow.className='item-name-row';
+  card.className='item-card'; card.id='ic'+itemCount;
+  const nameRow=document.createElement('div'); nameRow.className='item-name-row';
   const inp=document.createElement('input');
   inp.type='text'; inp.className='item-name-inp';
   inp.placeholder='Buscar insumo no estoque...';
@@ -503,8 +536,7 @@ function addItem(){
   function pickSug(idx){
     const item=results[idx]; if(!item) return;
     inp.value=cap(item.n);
-    const uLower=item.u.toLowerCase();
-    const fi=[...unitSel.options].findIndex(o=>o.value.toLowerCase()===uLower);
+    const fi=[...unitSel.options].findIndex(o=>o.value.toLowerCase()===item.u.toLowerCase());
     if(fi>=0) unitSel.selectedIndex=fi;
     sugBox.style.display='none'; qtyInp.focus();
   }
@@ -516,9 +548,7 @@ function addItem(){
 
 function selUrg(v){
   urgency=v;
-  ['b','m','a'].forEach(u=>{
-    document.getElementById('u-'+u).className='urg'+(u===v?' s'+u:'');
-  });
+  ['b','m','a'].forEach(u=>document.getElementById('u-'+u).className='urg'+(u===v?' s'+u:''));
 }
 
 function getItems(){
@@ -536,7 +566,7 @@ function buildMsg(req){
   let m='*📋 REQUISIÇÃO DE INSUMOS*\n';
   m+='━━━━━━━━━━━━━━━━━━\n';
   m+='🏪 *Setor:* '+req.setor+'\n';
-  m+='📦 *Origem:* '+req.origem+' → *Destino:* '+req.destino+'\n';
+  m+='📦 *Origem:* '+(req.origem||'—')+' → *Destino:* '+(req.destino||'—')+'\n';
   m+='👤 *Solicitante:* '+req.nome+'\n';
   m+='⚡ *Urgência:* '+ul[req.urgency]+'\n';
   m+='📅 '+dt+'\n';
@@ -553,13 +583,13 @@ function openWA(req){window.open('https://wa.me/'+WA+'?text='+encodeURIComponent
 function sendWA(){
   const items=getItems();
   if(!items.length){alert('Adicione pelo menos um insumo.');return;}
+  const req=mkReq(items,'sent');
   if(editingId){
-    updateReq(items,'sent');
-    const req=load().find(r=>r.id===editingId);
-    if(req) openWA(req);
+    REQ_REF.child(editingId).update(req);
+    const full=allReqs.find(r=>r.fbKey===editingId);
+    if(full) openWA({...full,...req});
   } else {
-    const req=mkReq(items,'sent');
-    const all=load(); all.unshift(req); save(all);
+    REQ_REF.push(req);
     openWA(req);
   }
   toast('Enviado pelo WhatsApp ✅'); editingId=null; goTo('s-home');
@@ -568,22 +598,33 @@ function sendWA(){
 function saveDraft(){
   const items=getItems();
   if(!items.length){alert('Adicione pelo menos um insumo.');return;}
-  if(editingId){updateReq(items,'pending');toast('Requisição atualizada ✓');}
-  else{const req=mkReq(items,'pending');const all=load();all.unshift(req);save(all);toast('Rascunho salvo 📝');}
+  const req=mkReq(items,'pending');
+  if(editingId){
+    REQ_REF.child(editingId).update(req);
+    toast('Requisição atualizada ✓');
+  } else {
+    REQ_REF.push(req);
+    toast('Rascunho salvo 📝');
+  }
   editingId=null; goTo('s-home');
 }
 
 function mkReq(items,status){
-  return{id:Date.now(),ts:Date.now(),
+  return{
+    ts:Date.now(),
     setor:document.getElementById('f-setor').value,
     origem:document.getElementById('f-origem').value||'—',
     destino:document.getElementById('f-destino').value||'—',
     nome:document.getElementById('f-nome').value.trim()||'Não informado',
-    urgency,dataEntrega:document.getElementById('f-data').value,
-    obs:document.getElementById('f-obs').value.trim(),items,status};
+    urgency,
+    dataEntrega:document.getElementById('f-data').value,
+    obs:document.getElementById('f-obs').value.trim(),
+    items,status
+  };
 }
 
-renderHome();
+// ---- INIT ----
+initFirebase();
 </script>
 </body>
 </html>

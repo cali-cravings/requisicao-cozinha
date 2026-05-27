@@ -403,7 +403,10 @@ function openDetail(fbKey){
 function row(k,v){return '<div class="dr"><span class="dk">'+k+'</span><span class="dv">'+v+'</span></div>';}
 
 function deleteReq(){
-  if(!currentDetail||!confirm('Excluir esta requisição?')) return;
+  if(!currentDetail) return;
+  const senha=prompt('Digite a senha para excluir:');
+  if(senha===null) return;
+  if(senha!=='000813'){toast('Senha incorreta ❌');return;}
   deleteFromFB(currentDetail.fbKey);
   toast('Excluída ✓'); goTo('s-home');
 }

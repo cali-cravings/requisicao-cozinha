@@ -367,8 +367,11 @@ function renderHome(){
     const ub=r.urgency==='a'?'<span class="badge ba">🔴 Alta</span>':'<span class="badge '+st.cls+'">'+st.lb+'</span>';
     const ico=r.status==='pending'?'⏳':r.status==='delivered'?'📦':'✅';
     const cls=r.status==='pending'?'p':'s';
-    return '<div class="ri" onclick="openDetail(''+r.fbKey+'')"><div class="rico '+cls+'">'+ico+'</div><div class="rm"><div class="rt">'+r.setor+'</div><div class="rs">'+r.nome+' · '+fmtTs(r.ts)+' · '+r.items.length+' item'+(r.items.length>1?'s':'')+'</div></div>'+ub+'</div>';
+    return '<div class="ri" data-key="'+r.fbKey+'"><div class="rico '+cls+'">'+ico+'</div><div class="rm"><div class="rt">'+r.setor+'</div><div class="rs">'+r.nome+' · '+fmtTs(r.ts)+' · '+r.items.length+' item'+(r.items.length>1?'s':'')+'</div></div>'+ub+'</div>';
   }).join('');
+  list.querySelectorAll('.ri').forEach(el=>{
+    el.addEventListener('click',()=>openDetail(el.dataset.key));
+  });
 }
 
 // ---- DETAIL ----

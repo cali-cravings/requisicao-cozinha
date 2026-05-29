@@ -59,6 +59,8 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .btn-delivered{background:none;border:.5px solid var(--gr);border-radius:var(--r);padding:13px;font-size:14px;color:var(--gr);cursor:pointer;width:100%;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
 .btn-delivered:active{background:var(--gr-l)}
 .btn-delivered.done{opacity:.4;pointer-events:none}
+.btn-excel-home{background:none;border:.5px solid #2C3E35;border-radius:var(--r);padding:13px;font-size:14px;color:#2C3E35;cursor:pointer;width:100%;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
+.btn-excel-home:active{background:#EDE8DC}
 .btn-excel{background:none;border:.5px solid #185fa5;border-radius:var(--r);padding:13px;font-size:14px;color:#185fa5;cursor:pointer;width:100%;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
 .btn-excel:active{background:#e6f1fb}
 .badge-d{background:#e6f1fb;color:#0c447c}
@@ -141,6 +143,7 @@ textarea{resize:none;line-height:1.5}
 #loading-bar{display:none;position:fixed;top:0;left:0;right:0;height:3px;background:var(--or);z-index:999;animation:loadpulse 1s infinite}
 @keyframes loadpulse{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -153,10 +156,11 @@ textarea{resize:none;line-height:1.5}
   </div>
   <div class="body">
     <div class="stats">
-      <div class="stat"><div class="stat-l">Pendentes</div><div class="stat-n o" id="cnt-p">0</div></div>
-      <div class="stat"><div class="stat-l">Enviadas hoje</div><div class="stat-n g" id="cnt-s">0</div></div>
+      <div class="stat"><div class="stat-l">Em aberto</div><div class="stat-n o" id="cnt-p">0</div></div>
+      <div class="stat"><div class="stat-l">Entregues hoje</div><div class="stat-n g" id="cnt-s">0</div></div>
     </div>
     <button class="btn-or" onclick="goTo('s-form')"><i class="ti ti-plus"></i> Nova requisição</button>
+    <button class="btn-excel-home" onclick="exportConsolidado()"><i class="ti ti-file-spreadsheet"></i> Exportar consolidado do dia</button>
     <div>
       <div class="sec-l">Requisições recentes</div>
       <div id="req-list" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -356,8 +360,10 @@ function toast(msg){
 // ---- HOME ----
 function renderHome(){
   const today=new Date().toDateString();
-  document.getElementById('cnt-p').textContent=allReqs.filter(r=>r.status==='pending').length;
-  document.getElementById('cnt-s').textContent=allReqs.filter(r=>r.status==='sent'&&new Date(r.ts).toDateString()===today).length;
+  // Pendentes = pending + sent (em aberto, ainda não entregue)
+  document.getElementById('cnt-p').textContent=allReqs.filter(r=>r.status==='pending'||r.status==='sent').length;
+  // Enviadas hoje = delivered hoje (entregues)
+  document.getElementById('cnt-s').textContent=allReqs.filter(r=>r.status==='delivered'&&new Date(r.ts).toDateString()===today).length;
   const list=document.getElementById('req-list');
   if(!allReqs.length){
     list.innerHTML='<div class="empty"><i class="ti ti-clipboard-list"></i>Nenhuma requisição ainda.<br>Crie a primeira!</div>';
@@ -636,6 +642,79 @@ function mkReq(items,status){
 }
 
 // ---- INIT ----
+// ---- EXPORT CONSOLIDADO ----
+function exportConsolidado(){
+  const today = new Date().toDateString();
+  const todayReqs = allReqs.filter(r => new Date(r.ts).toDateString() === today);
+
+  if(!todayReqs.length){
+    toast('Nenhuma transferência hoje 📭');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+  const totals = {}; // item name -> {qty, unit}
+
+  // One sheet per requisition
+  todayReqs.forEach((r, idx) => {
+    const d = new Date(r.ts);
+    const time = pad(d.getHours())+':'+pad(d.getMinutes());
+    const urgLb = {b:'Baixa',m:'Média',a:'Alta'};
+    const stLb = {pending:'Pendente',sent:'Enviada',delivered:'Entregue'};
+
+    // Sheet header rows
+    const sheetData = [
+      ['REQUISIÇÃO DE INSUMOS - CALI CRAVINGS'],
+      [''],
+      ['Data', pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+time],
+      ['Setor', r.setor],
+      ['Origem', r.origem||'—'],
+      ['Destino', r.destino||'—'],
+      ['Solicitante', r.nome],
+      ['Urgência', urgLb[r.urgency]||'—'],
+      ['Status', stLb[r.status]||'—'],
+      [''],
+      ['INSUMO','QUANTIDADE','UNIDADE'],
+    ];
+
+    r.items.forEach(it => {
+      sheetData.push([it.n, parseFloat(it.q)||0, it.u]);
+      // accumulate totals
+      const key = it.n.toUpperCase()+'__'+it.u;
+      if(!totals[key]) totals[key] = {n:it.n, u:it.u, qty:0};
+      totals[key].qty += parseFloat(it.q)||0;
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    // Column widths
+    ws['!cols'] = [{wch:40},{wch:12},{wch:10}];
+    // Sheet name: setor + time (max 31 chars)
+    const sheetName = (r.setor+' '+time).slice(0,31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  // Consolidado sheet
+  const consData = [
+    ['CONSOLIDADO DO DIA - CALI CRAVINGS'],
+    ['Data', new Date().toLocaleDateString('pt-BR')],
+    ['Total de requisições', todayReqs.length],
+    [''],
+    ['INSUMO','TOTAL','UNIDADE'],
+  ];
+  Object.values(totals)
+    .sort((a,b)=>a.n.localeCompare(b.n))
+    .forEach(item => consData.push([item.n, item.qty, item.u]));
+
+  const wsConsolidado = XLSX.utils.aoa_to_sheet(consData);
+  wsConsolidado['!cols'] = [{wch:40},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, wsConsolidado, 'CONSOLIDADO');
+
+  // Download
+  const dateStr = pad(new Date().getDate())+pad(new Date().getMonth()+1)+new Date().getFullYear();
+  XLSX.writeFile(wb, 'transferencias_'+dateStr+'.xlsx');
+  toast('Excel exportado! 📊');
+}
+
 initFirebase();
 </script>
 </body>

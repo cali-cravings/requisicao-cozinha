@@ -396,6 +396,8 @@ function openDetail(fbKey){
     row('Urgência',um[currentDetail.urgency]||'—')+
     (currentDetail.dataEntrega?row('Necessário até',fmtDate(currentDetail.dataEntrega)):'')+
     row('Status',sm[currentDetail.status]||'—')+
+    (currentDetail.senhaEntrega?row('Entregue por',currentDetail.senhaEntrega):'')+
+    (currentDetail.tsEntrega?row('Horário entrega',fmtTs(currentDetail.tsEntrega)):'')+
     (currentDetail.obs?'<div class="dr"><span class="dk">Obs</span><span class="dv" style="font-weight:400;color:var(--tx2)">'+currentDetail.obs+'</span></div>':'');
   document.getElementById('d-items').innerHTML=currentDetail.items.map(it=>row(it.n,it.q+' '+it.u)).join('');
   const bd=document.getElementById('btn-delivered');
@@ -455,7 +457,12 @@ function editReq(){
 // ---- DELIVERED ----
 function markDelivered(){
   if(!currentDetail||currentDetail.status==='delivered') return;
-  REQ_REF.child(currentDetail.fbKey).update({status:'delivered'});
+  const senhas=['127127','128128','129129','130130'];
+  const senha=prompt('Digite a senha para confirmar entrega:');
+  if(senha===null) return;
+  if(!senhas.includes(senha)){toast('Senha incorreta ❌');return;}
+  const senhaIdx=senhas.indexOf(senha)+1;
+  REQ_REF.child(currentDetail.fbKey).update({status:'delivered',senhaEntrega:'Senha '+senhaIdx,tsEntrega:Date.now()});
   const bd=document.getElementById('btn-delivered');
   if(bd){bd.className='btn-delivered done';bd.innerHTML='<i class="ti ti-check"></i> Entregue';}
   const be=document.getElementById('btn-edit');
@@ -677,12 +684,19 @@ function exportConsolidado(){
       ['INSUMO','QUANTIDADE','UNIDADE'],
     ];
 
+    // Add entrega info if delivered
+    if(r.senhaEntrega){
+      sheetData.splice(9,0,['Entregue por', r.senhaEntrega]);
+      if(r.tsEntrega) sheetData.splice(10,0,['Horário entrega', fmtTs(r.tsEntrega)]);
+    }
+
     r.items.forEach(it => {
       sheetData.push([it.n, parseFloat(it.q)||0, it.u]);
       // accumulate totals
       const key = it.n.toUpperCase()+'__'+it.u;
-      if(!totals[key]) totals[key] = {n:it.n, u:it.u, qty:0};
+      if(!totals[key]) totals[key] = {n:it.n, u:it.u, qty:0, senhas:new Set()};
       totals[key].qty += parseFloat(it.q)||0;
+      if(r.senhaEntrega) totals[key].senhas.add(r.senhaEntrega);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
@@ -699,14 +713,14 @@ function exportConsolidado(){
     ['Data', new Date().toLocaleDateString('pt-BR')],
     ['Total de requisições', todayReqs.length],
     [''],
-    ['INSUMO','TOTAL','UNIDADE'],
+    ['INSUMO','TOTAL','UNIDADE','ENTREGUE POR'],
   ];
   Object.values(totals)
     .sort((a,b)=>a.n.localeCompare(b.n))
-    .forEach(item => consData.push([item.n, item.qty, item.u]));
+    .forEach(item => consData.push([item.n, item.qty, item.u, item.senhas?[...item.senhas].join(', '):'—']));
 
   const wsConsolidado = XLSX.utils.aoa_to_sheet(consData);
-  wsConsolidado['!cols'] = [{wch:40},{wch:12},{wch:10}];
+  wsConsolidado['!cols'] = [{wch:40},{wch:12},{wch:10},{wch:15}];
   XLSX.utils.book_append_sheet(wb, wsConsolidado, 'CONSOLIDADO');
 
   // Download

@@ -435,6 +435,8 @@ function renderHome(){
   const stMap={pending:{cls:'bp',lb:'Pendente'},sent:{cls:'bs',lb:'Enviada'},delivered:{cls:'bd',lb:'Entregue'}};
   list.innerHTML=allReqs.map(r=>{
     const st=stMap[r.status]||stMap.sent;
+    const temFalta=r.items&&r.items.some(it=>it.falta===true);
+    const alertaHtml=temFalta?'<span class="alerta-badge">⚠️ Item em falta</span>':'';
     const ub=r.urgency==='a'?'<span class="badge ba">🔴 Alta</span>':'<span class="badge '+st.cls+'">'+st.lb+'</span>';
     const ico=r.status==='pending'?'⏳':r.status==='delivered'?'📦':'✅';
     const cls=r.status==='pending'?'p':'s';

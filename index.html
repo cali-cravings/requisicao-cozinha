@@ -61,6 +61,10 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .btn-delivered.done{opacity:.4;pointer-events:none}
 .btn-excel-home{background:none;border:.5px solid #2C3E35;border-radius:var(--r);padding:13px;font-size:14px;color:#2C3E35;cursor:pointer;width:100%;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
 .btn-excel-home:active{background:#EDE8DC}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-falta-main{background:none;border:.5px solid #e8560a;border-radius:var(--r);padding:13px;font-size:14px;color:#e8560a;cursor:pointer;width:100%;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
+.btn-falta-main:active{background:#fdf0ea}
+.btn-falta-main.ativo{background:#fdf0ea}
 .btn-excel{background:none;border:.5px solid #185fa5;border-radius:var(--r);padding:13px;font-size:14px;color:#185fa5;cursor:pointer;width:100%;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
 .btn-excel:active{background:#e6f1fb}
 .badge-d{background:#e6f1fb;color:#0c447c}
@@ -93,8 +97,8 @@ textarea{resize:none;line-height:1.5}
 .items-list{display:flex;flex-direction:column;gap:12px}
 
 /* Each item is a mini-card */
-.item-card{background:var(--surf2);border:.5px solid var(--bdr);border-radius:var(--rs);overflow:visible;position:relative}
-.item-name-row{display:flex;align-items:center;border-bottom:.5px solid var(--bdr)}
+.item-card{background:var(--surf2);border:.5px solid var(--bdr);border-radius:var(--rs);overflow:visible;position:relative;z-index:1}
+.item-name-row{display:flex;align-items:center;border-bottom:.5px solid var(--bdr);position:relative}
 .item-name-inp{flex:1;background:transparent;border:none;border-radius:0;padding:12px 13px;font-size:15px;box-shadow:none !important}
 .item-name-inp:focus{border:none;box-shadow:none !important;background:transparent}
 .item-del{width:42px;height:42px;background:none;border:none;color:var(--tx3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;-webkit-tap-highlight-color:transparent}
@@ -104,7 +108,7 @@ textarea{resize:none;line-height:1.5}
 .item-unit-sel{flex:1;padding:8px 10px;font-size:14px;border-radius:var(--rs)}
 
 /* SUGGESTIONS */
-.sug-box{position:fixed;background:var(--surf);border:.5px solid var(--bdr2);border-radius:var(--rs);z-index:9999;max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 8px 32px rgba(0,0,0,.22);display:none}
+.sug-box{position:absolute;top:100%;left:0;right:0;background:var(--surf);border:.5px solid var(--bdr2);border-radius:var(--rs);z-index:9999;max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 8px 32px rgba(0,0,0,.22);display:none}
 .sug-item{padding:11px 14px;font-size:14px;cursor:pointer;border-top:.5px solid var(--bdr);display:flex;justify-content:space-between;align-items:center;gap:8px;-webkit-tap-highlight-color:transparent}
 .sug-item:active,.sug-item.hi{background:var(--or-l)}
 .sug-nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -289,7 +293,10 @@ textarea{resize:none;line-height:1.5}
     <button class="btn-edit" id="btn-edit" onclick="editReq()"><i class="ti ti-edit"></i> Editar requisição</button>
     <button class="btn-delivered" id="btn-delivered" onclick="markDelivered()"><i class="ti ti-package"></i> Requisição entregue</button>
     <button class="btn-excel" onclick="exportExcel()"><i class="ti ti-file-spreadsheet"></i> Exportar Excel</button>
-    <button class="btn-sec" onclick="deleteReq()"><i class="ti ti-trash" style="margin-right:6px;color:#e24b4a"></i>Excluir requisição</button>
+    <div class="btn-row">
+      <button class="btn-falta-main" id="btn-falta-main" onclick="abrirFalta()"><i class="ti ti-alert-triangle"></i> Produto em falta</button>
+      <button class="btn-sec" onclick="deleteReq()"><i class="ti ti-trash" style="margin-right:6px;color:#e24b4a"></i>Excluir</button>
+    </div>
   </div>
 </div>
 
@@ -490,6 +497,13 @@ function openDetail(fbKey){
   }
   const be=document.getElementById('btn-edit');
   if(be) be.style.display=currentDetail.status==='delivered'?'none':'flex';
+  // Update falta button state
+  const bfm=document.getElementById('btn-falta-main');
+  if(bfm){
+    const temFalta=currentDetail.items&&currentDetail.items.some(it=>it.falta===true);
+    bfm.className='btn-falta-main'+(temFalta?' ativo':'');
+    bfm.innerHTML=temFalta?'<i class="ti ti-alert-triangle"></i> ⚠️ Tem itens em falta':'<i class="ti ti-alert-triangle"></i> Produto em falta';
+  }
   goTo('s-detail');
 }
 
@@ -656,10 +670,6 @@ function addItem(){
       const cat=(item.s&&CAT[item.s])||{cls:'tag-coz',lb:'Cozinha'};
       return '<div class="sug-item" data-i="'+i+'"><span class="sug-nm">'+cap(item.n)+'</span><span class="sug-tag '+cat.cls+'">'+cat.lb+'</span></div>';
     }).join('');
-    const rect=inp.getBoundingClientRect();
-    sugBox.style.top=(rect.bottom+window.scrollY)+'px';
-    sugBox.style.left=rect.left+'px';
-    sugBox.style.width=rect.width+'px';
     sugBox.style.display='block';
     sugBox.querySelectorAll('.sug-item').forEach(el=>{
       el.addEventListener('touchstart',e=>{e.preventDefault();pickSug(parseInt(el.dataset.i));},{passive:false});
@@ -835,6 +845,24 @@ function exportConsolidado(){
   const dateStr = pad(new Date().getDate())+pad(new Date().getMonth()+1)+new Date().getFullYear();
   XLSX.writeFile(wb, 'transferencias_'+dateStr+'.xlsx');
   toast('Excel exportado! 📊');
+}
+
+// ---- ABRIR FALTA (scroll to items) ----
+function abrirFalta(){
+  if(!currentDetail) return;
+  if(currentDetail.status!=='delivered'){
+    toast('Confirme a entrega primeiro para marcar itens em falta');
+    return;
+  }
+  // Scroll to items section
+  const el=document.getElementById('d-items');
+  if(el){
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.style.transition='box-shadow .3s';
+    el.style.boxShadow='0 0 0 2px #e8560a';
+    setTimeout(()=>{el.style.boxShadow='none';},2000);
+  }
+  toast('Toque em "Marcar falta" ao lado do produto ⚠️');
 }
 
 // ---- TOGGLE FALTA ----

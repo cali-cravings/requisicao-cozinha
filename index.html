@@ -194,6 +194,16 @@ textarea{resize:none;line-height:1.5}
 <meta name="apple-mobile-web-app-title" content="Cali Cravings">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#2C3E35">
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/requisicao-cozinha/sw.js')
+      .then(reg=>console.log('SW registrado'))
+      .catch(err=>console.log('SW erro:', err));
+  });
+}
+</script>
 </head>
 <body>
 <div id="app">
@@ -943,3 +953,24 @@ initFirebase();
     }
   ]
 }
+// Cali Cravings - Service Worker
+const CACHE_NAME = 'cali-cravings-v1';
+const urlsToCache = [
+  '/requisicao-cozinha/',
+  '/requisicao-cozinha/index.html',
+  '/requisicao-cozinha/manifest.json',
+  '/requisicao-cozinha/icon-192.png',
+  '/requisicao-cozinha/icon-512.png'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+  );
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => response || fetch(event.request))
+  );
+});

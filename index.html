@@ -1,3 +1,29 @@
+{
+  "name": "Cali Cravings — Requisições",
+  "short_name": "Cali Cravings",
+  "description": "App de requisição de insumos Cali Cravings Gastro Bar",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#2C3E35",
+  "theme_color": "#2C3E35",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -188,7 +214,7 @@ textarea{resize:none;line-height:1.5}
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="application-name" content="Cali Cravings">
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="./manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cali Cravings">
@@ -198,7 +224,7 @@ textarea{resize:none;line-height:1.5}
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/requisicao-cozinha/sw.js')
+    navigator.serviceWorker.register('./sw.js')
       .then(reg=>console.log('SW registrado'))
       .catch(err=>console.log('SW erro:', err));
   });
@@ -929,44 +955,17 @@ initFirebase();
 </script>
 </body>
 </html>
-{
-  "name": "Cali Cravings — Requisições",
-  "short_name": "Cali Cravings",
-  "description": "App de requisição de insumos Cali Cravings Gastro Bar",
-  "start_url": "/requisicao-cozinha/",
-  "display": "standalone",
-  "background_color": "#2C3E35",
-  "theme_color": "#2C3E35",
-  "orientation": "portrait",
-  "icons": [
-    {
-      "src": "https://cali-cravings.github.io/requisicao-cozinha/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "https://cali-cravings.github.io/requisicao-cozinha/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ]
-}
-// Cali Cravings - Service Worker
-const CACHE_NAME = 'cali-cravings-v1';
-const urlsToCache = [
-  '/requisicao-cozinha/',
-  '/requisicao-cozinha/index.html',
-  '/requisicao-cozinha/manifest.json',
-  '/requisicao-cozinha/icon-192.png',
-  '/requisicao-cozinha/icon-512.png'
-];
+// Cali Cravings - Service Worker v2
+const CACHE_NAME = 'cali-cravings-v2';
+const urlsToCache = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', event => {

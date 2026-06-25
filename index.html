@@ -188,6 +188,12 @@ textarea{resize:none;line-height:1.5}
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="application-name" content="Cali Cravings">
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cali Cravings">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2C3E35">
 </head>
 <body>
 <div id="app">
@@ -913,3 +919,27 @@ initFirebase();
 </script>
 </body>
 </html>
+{
+  "name": "Cali Cravings — Requisições",
+  "short_name": "Cali Cravings",
+  "description": "App de requisição de insumos Cali Cravings Gastro Bar",
+  "start_url": "/requisicao-cozinha/",
+  "display": "standalone",
+  "background_color": "#2C3E35",
+  "theme_color": "#2C3E35",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cali-cravings.github.io/requisicao-cozinha/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cali-cravings.github.io/requisicao-cozinha/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

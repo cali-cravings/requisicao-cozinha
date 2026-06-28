@@ -925,6 +925,17 @@ function exportMes(){
   const resumoTotals = {};
   const usedSheets = {};
 
+  // Helper to shorten stock names for Excel tabs
+  function shortName(n){
+    const s=n.trim().toUpperCase();
+    if(s.includes('MASHA ADM')||s==='MASHA') return 'ADM';
+    if(s.includes('MASHA PIER')||s.includes('MASHAPIER')) return 'MASHAP';
+    if(s.includes('CALI CAF')) return 'CAFE';
+    if(s.includes('LINHA')) return s.replace('LINHA','LINHA').slice(0,6);
+    if(s.includes('BAR')) return 'BAR';
+    return s.slice(0,8);
+  }
+
   // One sheet per unique route
   Object.keys(routes).sort().forEach(key => {
     const route = routes[key];
@@ -955,10 +966,10 @@ function exportMes(){
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
     ws['!cols']=[{wch:8},{wch:40},{wch:18},{wch:10},{wch:12}];
 
-    // Build unique sheet name
+    // Build unique sheet name using short names
     const parts = key.split('|||');
-    const orig3 = parts[0].slice(0,10);
-    const dest3 = parts[1].slice(0,10);
+    const orig3 = shortName(parts[0]);
+    const dest3 = shortName(parts[1]);
     let sName = (orig3+'-'+dest3).slice(0,28);
     if(usedSheets[sName]!==undefined){
       usedSheets[sName]++;

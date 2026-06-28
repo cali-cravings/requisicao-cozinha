@@ -864,7 +864,7 @@ function exportConsolidado(){
     // Column widths
     ws['!cols'] = [{wch:40},{wch:12},{wch:10}];
     // Sheet name: setor + time (max 31 chars)
-    const sheetName = (r.setor+' '+time).slice(0,31);
+    const sheetName = (String(idx+1)+' '+r.setor+' '+time).slice(0,31);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
 
@@ -895,64 +895,93 @@ function exportMes(){
   const now = new Date();
   const mes = now.getMonth();
   const ano = now.getFullYear();
+  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
   const mesReqs = allReqs.filter(r => {
     const d = new Date(r.ts);
     return d.getMonth()===mes && d.getFullYear()===ano;
   });
+
   if(!mesReqs.length){toast('Nenhuma transferência este mês 📭');return;}
 
   const wb = XLSX.utils.book_new();
-  const totals = {};
 
-  mesReqs.forEach((r) => {
-    const d = new Date(r.ts);
-    const time = pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes());
-    const urgLb = {b:'Baixa',m:'Média',a:'Alta'};
-    const stLb = {pending:'Pendente',sent:'Enviada',delivered:'Entregue'};
-    const sheetData = [
-      ['REQUISIÇÃO DE INSUMOS - CALI CRAVINGS'],[''],
-      ['Data', time],['Setor', r.setor],
-      ['Origem', r.origem||'—'],['Destino', r.destino||'—'],
-      ['Solicitante', r.nome],['Urgência', urgLb[r.urgency]||'—'],
-      ['Status', stLb[r.status]||'—'],[''],
-      ['CÓD.','INSUMO','QUANTIDADE','UNIDADE'],
-    ];
-    if(r.senhaEntrega){
-      sheetData.splice(9,0,['Entregue por', r.senhaEntrega]);
-      if(r.tsEntrega) sheetData.splice(10,0,['Horário entrega', fmtTs(r.tsEntrega)]);
-    }
-    r.items.forEach(it => {
-      sheetData.push([it.c||'', it.n, parseFloat(it.q)||0, it.u]);
-      const key = it.n.toUpperCase()+'__'+it.u+'__'+(r.origem||'')+'__'+(r.destino||'');
-      if(!totals[key]) totals[key]={c:it.c||'',n:it.n,u:it.u,origem:r.origem||'—',destino:r.destino||'—',qty:0,senhas:new Set()};
-      totals[key].qty += parseFloat(it.q)||0;
-      if(r.senhaEntrega) totals[key].senhas.add(r.senhaEntrega);
+  // Group by route: origem -> destino
+  const routes = {};
+  mesReqs.forEach(r => {
+    const origem = (r.origem||'—').toUpperCase().replace(/ /g,'-');
+    const destino = (r.destino||'—').toUpperCase().replace(/ /g,'-');
+    const routeKey = origem+'→'+destino;
+    if(!routes[routeKey]) routes[routeKey] = {
+      label: origem.replace('MASHA-ADM','MASHA').replace('MASHA-PIER','PIER') + '-' +
+             destino.replace('MASHA-ADM','MASHA').replace('MASHA-PIER','PIER'),
+      origem: r.origem||'—',
+      destino: r.destino||'—',
+      reqs: []
+    };
+    routes[routeKey].reqs.push(r);
+  });
+
+  // Build one sheet per route
+  const resumoTotals = {};
+
+  Object.values(routes).sort((a,b)=>a.label.localeCompare(b.label)).forEach(route => {
+    const prodTotals = {};
+
+    route.reqs.forEach(r => {
+      r.items.forEach(it => {
+        const key = (it.c||'') + '__' + it.n.toUpperCase() + '__' + it.u;
+        if(!prodTotals[key]) prodTotals[key] = {c:it.c||'', n:it.n, u:it.u, qty:0, vezes:0};
+        prodTotals[key].qty += parseFloat(it.q)||0;
+        prodTotals[key].vezes += 1;
+
+        // Also accumulate in resumo
+        if(!resumoTotals[key]) resumoTotals[key] = {c:it.c||'', n:it.n, u:it.u, qty:0, vezes:0};
+        resumoTotals[key].qty += parseFloat(it.q)||0;
+        resumoTotals[key].vezes += 1;
+      });
     });
+
+    const sheetData = [
+      ['CONSOLIDADO GERAL — '+route.origem.toUpperCase()+' → '+route.destino.toUpperCase()],
+      ['Total de requisições nessa rota:', route.reqs.length],
+      ['Período:', meses[mes]+'/'+ano],
+      [''],
+      ['PRODUTO','TOTAL TRANSFERIDO','UNIDADE','Nº DE VEZES'],
+    ];
+
+    Object.values(prodTotals)
+      .sort((a,b)=>a.n.localeCompare(b.n))
+      .forEach(p => sheetData.push([p.n, p.qty, p.u, p.vezes]));
+
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    ws['!cols']=[{wch:8},{wch:40},{wch:12},{wch:10}];
-    const sheetName=(r.setor+' '+time).slice(0,31);
+    ws['!cols'] = [{wch:40},{wch:18},{wch:10},{wch:12}];
+
+    // Highlight header row
+    const sheetName = route.label.slice(0,31);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
 
-  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const consData=[
-    ['CONSOLIDADO DO MÊS - CALI CRAVINGS'],
-    ['Mês', meses[mes]+'/'+ano],
-    ['Total de requisições', mesReqs.length],[''],
-    ['CÓD.','INSUMO','ORIGEM','DESTINO','TOTAL','UNIDADE','ENTREGUE POR'],
+  // RESUMO GERAL sheet
+  const resumoData = [
+    ['RESUMO GERAL — TODAS AS ROTAS'],
+    ['Período:', meses[mes]+'/'+ano],
+    ['Total de requisições:', mesReqs.length],
+    [''],
+    ['CÓD.','PRODUTO','TOTAL TRANSFERIDO','UNIDADE','Nº DE VEZES'],
   ];
-  Object.values(totals).sort((a,b)=>a.n.localeCompare(b.n))
-    .forEach(item=>consData.push([item.c||'',item.n,item.origem,item.destino,item.qty,item.u,item.senhas?[...item.senhas].join(', '):'—']));
+  Object.values(resumoTotals)
+    .sort((a,b)=>a.n.localeCompare(b.n))
+    .forEach(p => resumoData.push([p.c||'', p.n, p.qty, p.u, p.vezes]));
 
-  const wsC=XLSX.utils.aoa_to_sheet(consData);
-  wsC['!cols']=[{wch:8},{wch:40},{wch:12},{wch:12},{wch:10},{wch:10},{wch:15}];
-  XLSX.utils.book_append_sheet(wb, wsC, 'CONSOLIDADO MÊS');
+  const wsR = XLSX.utils.aoa_to_sheet(resumoData);
+  wsR['!cols'] = [{wch:8},{wch:40},{wch:18},{wch:10},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, wsR, 'RESUMO GERAL');
 
-  const nomeMes=meses[mes]+ano;
-  XLSX.writeFile(wb,'transferencias_'+nomeMes+'.xlsx',{bookType:'xlsx',type:'binary'});
+  const nomeMes = meses[mes]+ano;
+  XLSX.writeFile(wb,'consolidado_'+nomeMes+'.xlsx',{bookType:'xlsx',type:'binary'});
   toast('Consolidado do mês exportado! 📊');
 }
-
 // ---- ABRIR FALTA (scroll to items) ----
 function abrirFalta(){
   if(!currentDetail) return;

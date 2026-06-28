@@ -910,83 +910,77 @@ function exportMes(){
 
   const wb = XLSX.utils.book_new();
 
-  // Group by route: origem -> destino
+  // Group by exact route key
   const routes = {};
   mesReqs.forEach(r => {
-    const origem = (r.origem||'—').toUpperCase().replace(/ /g,'-');
-    const destino = (r.destino||'—').toUpperCase().replace(/ /g,'-');
-    const routeKey = origem+'→'+destino;
-    if(!routes[routeKey]) routes[routeKey] = {
-      label: origem.replace('MASHA-ADM','MASHA').replace('MASHA-PIER','PIER') + '-' +
-             destino.replace('MASHA-ADM','MASHA').replace('MASHA-PIER','PIER'),
-      origem: r.origem||'—',
-      destino: r.destino||'—',
-      reqs: []
-    };
-    routes[routeKey].reqs.push(r);
+    const orig = (r.origem||'SEM').trim().toUpperCase();
+    const dest = (r.destino||'SEM').trim().toUpperCase();
+    const key = orig+'|||'+dest;
+    if(!routes[key]){
+      routes[key] = {origem: r.origem||'—', destino: r.destino||'—', reqs: []};
+    }
+    routes[key].reqs.push(r);
   });
 
-  // Build one sheet per route
   const resumoTotals = {};
+  const usedSheets = {};
 
-  const usedNames={};
-  Object.values(routes).sort((a,b)=>a.label.localeCompare(b.label)).forEach(route => {
+  // One sheet per unique route
+  Object.keys(routes).sort().forEach(key => {
+    const route = routes[key];
     const prodTotals = {};
 
     route.reqs.forEach(r => {
       r.items.forEach(it => {
-        const key = (it.c||'') + '__' + it.n.toUpperCase() + '__' + it.u;
-        if(!prodTotals[key]) prodTotals[key] = {c:it.c||'', n:it.n, u:it.u, qty:0, vezes:0};
-        prodTotals[key].qty += parseFloat(it.q)||0;
-        prodTotals[key].vezes += 1;
-
-        // Also accumulate in resumo
-        if(!resumoTotals[key]) resumoTotals[key] = {c:it.c||'', n:it.n, u:it.u, qty:0, vezes:0};
-        resumoTotals[key].qty += parseFloat(it.q)||0;
-        resumoTotals[key].vezes += 1;
+        const pKey = it.n.toUpperCase()+'__'+it.u;
+        if(!prodTotals[pKey]) prodTotals[pKey]={c:it.c||'',n:it.n,u:it.u,qty:0,vezes:0};
+        prodTotals[pKey].qty += parseFloat(it.q)||0;
+        prodTotals[pKey].vezes += 1;
+        if(!resumoTotals[pKey]) resumoTotals[pKey]={c:it.c||'',n:it.n,u:it.u,qty:0,vezes:0};
+        resumoTotals[pKey].qty += parseFloat(it.q)||0;
+        resumoTotals[pKey].vezes += 1;
       });
     });
 
     const sheetData = [
-      ['CONSOLIDADO GERAL — '+route.origem.toUpperCase()+' → '+route.destino.toUpperCase()],
+      ['CONSOLIDADO — '+route.origem.toUpperCase()+' → '+route.destino.toUpperCase()],
       ['Total de requisições nessa rota:', route.reqs.length],
       ['Período:', meses[mes]+'/'+ano],
       [''],
-      ['PRODUTO','TOTAL TRANSFERIDO','UNIDADE','Nº DE VEZES'],
+      ['CÓD.','PRODUTO','TOTAL TRANSFERIDO','UNIDADE','Nº DE VEZES'],
     ];
-
-    Object.values(prodTotals)
-      .sort((a,b)=>a.n.localeCompare(b.n))
-      .forEach(p => sheetData.push([p.n, p.qty, p.u, p.vezes]));
+    Object.values(prodTotals).sort((a,b)=>a.n.localeCompare(b.n))
+      .forEach(p => sheetData.push([p.c||'', p.n, p.qty, p.u, p.vezes]));
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    ws['!cols'] = [{wch:40},{wch:18},{wch:10},{wch:12}];
+    ws['!cols']=[{wch:8},{wch:40},{wch:18},{wch:10},{wch:12}];
 
-    // Highlight header row
-    let sheetName = route.label.slice(0,28);
-    if(usedNames[sheetName]){
-      usedNames[sheetName]++;
-      sheetName = (sheetName+'_'+usedNames[sheetName]).slice(0,31);
+    // Build unique sheet name
+    const parts = key.split('|||');
+    const orig3 = parts[0].slice(0,10);
+    const dest3 = parts[1].slice(0,10);
+    let sName = (orig3+'-'+dest3).slice(0,28);
+    if(usedSheets[sName]!==undefined){
+      usedSheets[sName]++;
+      sName = (sName+'_'+usedSheets[sName]).slice(0,31);
     } else {
-      usedNames[sheetName]=1;
+      usedSheets[sName]=0;
     }
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.utils.book_append_sheet(wb, ws, sName);
   });
 
-  // RESUMO GERAL sheet
+  // RESUMO GERAL
   const resumoData = [
     ['RESUMO GERAL — TODAS AS ROTAS'],
     ['Período:', meses[mes]+'/'+ano],
-    ['Total de requisições:', mesReqs.length],
-    [''],
+    ['Total de requisições:', mesReqs.length],[''],
     ['CÓD.','PRODUTO','TOTAL TRANSFERIDO','UNIDADE','Nº DE VEZES'],
   ];
-  Object.values(resumoTotals)
-    .sort((a,b)=>a.n.localeCompare(b.n))
+  Object.values(resumoTotals).sort((a,b)=>a.n.localeCompare(b.n))
     .forEach(p => resumoData.push([p.c||'', p.n, p.qty, p.u, p.vezes]));
 
   const wsR = XLSX.utils.aoa_to_sheet(resumoData);
-  wsR['!cols'] = [{wch:8},{wch:40},{wch:18},{wch:10},{wch:12}];
+  wsR['!cols']=[{wch:8},{wch:40},{wch:18},{wch:10},{wch:12}];
   XLSX.utils.book_append_sheet(wb, wsR, 'RESUMO GERAL');
 
   const nomeMes = meses[mes]+ano;

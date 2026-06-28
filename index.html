@@ -814,83 +814,75 @@ function mkReq(items,status){
 function exportConsolidado(){
   const today = new Date().toDateString();
   const todayReqs = allReqs.filter(r => new Date(r.ts).toDateString() === today);
-
-  if(!todayReqs.length){
-    toast('Nenhuma transferência hoje 📭');
-    return;
-  }
+  if(!todayReqs.length){toast('Nenhuma transferência hoje 📭');return;}
 
   const wb = XLSX.utils.book_new();
-  const totals = {}; // item name -> {qty, unit}
+  const totals = {};
 
-  // One sheet per requisition
   todayReqs.forEach((r, idx) => {
     const d = new Date(r.ts);
     const time = pad(d.getHours())+':'+pad(d.getMinutes());
-    const urgLb = {b:'Baixa',m:'Média',a:'Alta'};
+    const urgLb = {b:'Baixa',m:'Media',a:'Alta'};
     const stLb = {pending:'Pendente',sent:'Enviada',delivered:'Entregue'};
 
-    // Sheet header rows
-    const sheetData = [
-      ['REQUISIÇÃO DE INSUMOS - CALI CRAVINGS'],
-      [''],
-      ['Data', pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+time],
-      ['Setor', r.setor],
-      ['Origem', r.origem||'—'],
-      ['Destino', r.destino||'—'],
-      ['Solicitante', r.nome],
-      ['Urgência', urgLb[r.urgency]||'—'],
-      ['Status', stLb[r.status]||'—'],
-      [''],
-      ['INSUMO','QUANTIDADE','UNIDADE'],
+    const rows = [
+      ['REQUISICAO DE INSUMOS - CALI CRAVINGS','','','',''],
+      ['Data', pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+time,'','',''],
+      ['Setor', r.setor,'','',''],
+      ['Origem', r.origem||'—','','',''],
+      ['Destino', r.destino||'—','','',''],
+      ['Solicitante', r.nome,'','',''],
+      ['Urgencia', urgLb[r.urgency]||'—','','',''],
+      ['Status', stLb[r.status]||'—','','',''],
     ];
 
-    // Add entrega info if delivered
-    if(r.senhaEntrega){
-      sheetData.splice(9,0,['Entregue por', r.senhaEntrega]);
-      if(r.tsEntrega) sheetData.splice(10,0,['Horário entrega', fmtTs(r.tsEntrega)]);
-    }
+    if(r.senhaEntrega) rows.push(['Entregue por', String(r.senhaEntrega),'','','']);
+    if(r.tsEntrega) rows.push(['Horario entrega', String(fmtTs(r.tsEntrega)),'','','']);
+    rows.push(['','','','','']);
+    rows.push(['COD.','INSUMO','QUANTIDADE','UNIDADE','']);
 
     r.items.forEach(it => {
-      sheetData.push([it.n, parseFloat(it.q)||0, it.u]);
-      // accumulate totals
+      const cod = it.c ? String(it.c) : '';
+      const qty = parseFloat(it.q)||0;
+      rows.push([cod, String(it.n), qty, String(it.u), '']);
       const key = it.n.toUpperCase()+'__'+it.u+'__'+(r.origem||'')+'__'+(r.destino||'');
-      if(!totals[key]) totals[key] = {c:it.c||'', n:it.n, u:it.u, origem:r.origem||'—', destino:r.destino||'—', qty:0, senhas:[]};
-      totals[key].qty += parseFloat(it.q)||0;
+      if(!totals[key]) totals[key]={c:it.c||'',n:it.n,u:it.u,origem:r.origem||'—',destino:r.destino||'—',qty:0,senhas:[]};
+      totals[key].qty += qty;
       if(r.senhaEntrega && !totals[key].senhas.includes(r.senhaEntrega)) totals[key].senhas.push(r.senhaEntrega);
     });
 
-    const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    // Column widths
-    ws['!cols'] = [{wch:40},{wch:12},{wch:10}];
-    // Sheet name: setor + time (max 31 chars)
-    const sheetName = (String(idx+1)+' '+r.setor+' '+time).slice(0,31);
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:8},{wch:40},{wch:12},{wch:10},{wch:5}];
+    const sName = (String(idx+1)+' '+r.setor+' '+time).slice(0,31);
+    XLSX.utils.book_append_sheet(wb, ws, sName);
   });
 
-  // Consolidado sheet
-  const consData = [
-    ['CONSOLIDADO DO DIA - CALI CRAVINGS'],
-    ['Data', new Date().toLocaleDateString('pt-BR')],
-    ['Total de requisições', todayReqs.length],
-    [''],
-    ['CÓD.','INSUMO','ORIGEM','DESTINO','TOTAL','UNIDADE','ENTREGUE POR'],
+  const consRows = [
+    ['CONSOLIDADO DO DIA - CALI CRAVINGS','','','','','',''],
+    ['Data', new Date().toLocaleDateString('pt-BR'),'','','','',''],
+    ['Total de requisicoes', String(todayReqs.length),'','','','',''],
+    ['','','','','','',''],
+    ['COD.','INSUMO','ORIGEM','DESTINO','TOTAL','UNIDADE','ENTREGUE POR'],
   ];
-  Object.values(totals)
-    .sort((a,b)=>a.n.localeCompare(b.n))
-    .forEach(item => consData.push([item.c||'', item.n, item.origem, item.destino, item.qty, item.u, item.senhas&&item.senhas.length?item.senhas.join(', '):'—']));
+  Object.values(totals).sort((a,b)=>a.n.localeCompare(b.n))
+    .forEach(item => consRows.push([
+      item.c?String(item.c):'',
+      String(item.n),
+      String(item.origem),
+      String(item.destino),
+      item.qty,
+      String(item.u),
+      item.senhas.length?item.senhas.join(', '):'—'
+    ]));
 
-  const wsConsolidado = XLSX.utils.aoa_to_sheet(consData);
-  wsConsolidado['!cols'] = [{wch:8},{wch:40},{wch:12},{wch:12},{wch:10},{wch:10},{wch:15}];
-  XLSX.utils.book_append_sheet(wb, wsConsolidado, 'CONSOLIDADO');
+  const wsC = XLSX.utils.aoa_to_sheet(consRows);
+  wsC['!cols']=[{wch:8},{wch:40},{wch:12},{wch:12},{wch:10},{wch:10},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, wsC, 'CONSOLIDADO');
 
-  // Download
   const dateStr = pad(new Date().getDate())+pad(new Date().getMonth()+1)+new Date().getFullYear();
   XLSX.writeFile(wb, 'transferencias_'+dateStr+'.xlsx');
   toast('Excel exportado! 📊');
 }
-
-// ---- EXPORT CONSOLIDADO MÊS ----
 function exportMes(){
   try{
   const now = new Date();

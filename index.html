@@ -929,6 +929,7 @@ function exportMes(){
   // Build one sheet per route
   const resumoTotals = {};
 
+  const usedNames={};
   Object.values(routes).sort((a,b)=>a.label.localeCompare(b.label)).forEach(route => {
     const prodTotals = {};
 
@@ -962,7 +963,13 @@ function exportMes(){
     ws['!cols'] = [{wch:40},{wch:18},{wch:10},{wch:12}];
 
     // Highlight header row
-    const sheetName = route.label.slice(0,31);
+    let sheetName = route.label.slice(0,28);
+    if(usedNames[sheetName]){
+      usedNames[sheetName]++;
+      sheetName = (sheetName+'_'+usedNames[sheetName]).slice(0,31);
+    } else {
+      usedNames[sheetName]=1;
+    }
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
 

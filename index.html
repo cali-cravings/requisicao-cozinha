@@ -221,6 +221,7 @@ if('serviceWorker' in navigator){
     </div>
     <button class="btn-or" onclick="goTo('s-form')"><i class="ti ti-plus"></i> Nova requisição</button>
     <button class="btn-excel-home" onclick="exportConsolidado()"><i class="ti ti-file-spreadsheet"></i> Exportar consolidado do dia</button>
+    <button class="btn-excel-home" onclick="exportMes()" style="margin-top:-4px"><i class="ti ti-calendar-stats"></i> Exportar consolidado do mês</button>
     <div>
       <div class="sec-l">Requisições recentes</div>
       <div id="req-list" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -583,7 +584,9 @@ function editReq(){
     addItem();
     const cards=document.querySelectorAll('.item-card');
     const last=cards[cards.length-1];
-    last.querySelector('.item-name-inp').value=it.n;
+    const ninp=last.querySelector('.item-name-inp');
+    ninp.value=it.n;
+    ninp.dataset.cod=it.c||'';
     last.querySelector('.item-qty-inp').value=it.q;
     const us=last.querySelector('.item-unit-sel');
     const fi=[...us.options].findIndex(o=>o.value.toLowerCase()===it.u.toLowerCase());
@@ -726,9 +729,16 @@ function selUrg(v){
 function getItems(){
   return [...document.querySelectorAll('.item-card')].map(card=>{
     const inp=card.querySelector('.item-name-inp');
+    const nome=inp.value.trim();
+    // Try to find code from DB if not stored in dataset
+    let cod=inp.dataset.cod||'';
+    if(!cod && nome){
+      const found=DB.find(i=>i.n.toUpperCase()===nome.toUpperCase());
+      if(found) cod=String(found.c);
+    }
     return {
-      c:inp.dataset.cod||'',
-      n:inp.value.trim(),
+      c:cod,
+      n:nome,
       q:card.querySelector('.item-qty-inp').value||'—',
       u:card.querySelector('.item-unit-sel').value
     };
@@ -878,6 +888,69 @@ function exportConsolidado(){
   const dateStr = pad(new Date().getDate())+pad(new Date().getMonth()+1)+new Date().getFullYear();
   XLSX.writeFile(wb, 'transferencias_'+dateStr+'.xlsx', {bookType:'xlsx', type:'binary'});
   toast('Excel exportado! 📊');
+}
+
+// ---- EXPORT CONSOLIDADO MÊS ----
+function exportMes(){
+  const now = new Date();
+  const mes = now.getMonth();
+  const ano = now.getFullYear();
+  const mesReqs = allReqs.filter(r => {
+    const d = new Date(r.ts);
+    return d.getMonth()===mes && d.getFullYear()===ano;
+  });
+  if(!mesReqs.length){toast('Nenhuma transferência este mês 📭');return;}
+
+  const wb = XLSX.utils.book_new();
+  const totals = {};
+
+  mesReqs.forEach((r) => {
+    const d = new Date(r.ts);
+    const time = pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+    const urgLb = {b:'Baixa',m:'Média',a:'Alta'};
+    const stLb = {pending:'Pendente',sent:'Enviada',delivered:'Entregue'};
+    const sheetData = [
+      ['REQUISIÇÃO DE INSUMOS - CALI CRAVINGS'],[''],
+      ['Data', time],['Setor', r.setor],
+      ['Origem', r.origem||'—'],['Destino', r.destino||'—'],
+      ['Solicitante', r.nome],['Urgência', urgLb[r.urgency]||'—'],
+      ['Status', stLb[r.status]||'—'],[''],
+      ['CÓD.','INSUMO','QUANTIDADE','UNIDADE'],
+    ];
+    if(r.senhaEntrega){
+      sheetData.splice(9,0,['Entregue por', r.senhaEntrega]);
+      if(r.tsEntrega) sheetData.splice(10,0,['Horário entrega', fmtTs(r.tsEntrega)]);
+    }
+    r.items.forEach(it => {
+      sheetData.push([it.c||'', it.n, parseFloat(it.q)||0, it.u]);
+      const key = it.n.toUpperCase()+'__'+it.u+'__'+(r.origem||'')+'__'+(r.destino||'');
+      if(!totals[key]) totals[key]={c:it.c||'',n:it.n,u:it.u,origem:r.origem||'—',destino:r.destino||'—',qty:0,senhas:new Set()};
+      totals[key].qty += parseFloat(it.q)||0;
+      if(r.senhaEntrega) totals[key].senhas.add(r.senhaEntrega);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    ws['!cols']=[{wch:8},{wch:40},{wch:12},{wch:10}];
+    const sheetName=(r.setor+' '+time).slice(0,31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const consData=[
+    ['CONSOLIDADO DO MÊS - CALI CRAVINGS'],
+    ['Mês', meses[mes]+'/'+ano],
+    ['Total de requisições', mesReqs.length],[''],
+    ['CÓD.','INSUMO','ORIGEM','DESTINO','TOTAL','UNIDADE','ENTREGUE POR'],
+  ];
+  Object.values(totals).sort((a,b)=>a.n.localeCompare(b.n))
+    .forEach(item=>consData.push([item.c||'',item.n,item.origem,item.destino,item.qty,item.u,item.senhas?[...item.senhas].join(', '):'—']));
+
+  const wsC=XLSX.utils.aoa_to_sheet(consData);
+  wsC['!cols']=[{wch:8},{wch:40},{wch:12},{wch:12},{wch:10},{wch:10},{wch:15}];
+  XLSX.utils.book_append_sheet(wb, wsC, 'CONSOLIDADO MÊS');
+
+  const nomeMes=meses[mes]+ano;
+  XLSX.writeFile(wb,'transferencias_'+nomeMes+'.xlsx',{bookType:'xlsx',type:'binary'});
+  toast('Consolidado do mês exportado! 📊');
 }
 
 // ---- ABRIR FALTA (scroll to items) ----

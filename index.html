@@ -892,17 +892,21 @@ function exportConsolidado(){
 
 // ---- EXPORT CONSOLIDADO MÊS ----
 function exportMes(){
+  try{
   const now = new Date();
   const mes = now.getMonth();
   const ano = now.getFullYear();
   const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  if(!allReqs.length){toast('Carregando dados... tente novamente ⏳');return;}
 
   const mesReqs = allReqs.filter(r => {
     const d = new Date(r.ts);
     return d.getMonth()===mes && d.getFullYear()===ano;
   });
 
-  if(!mesReqs.length){toast('Nenhuma transferência este mês 📭');return;}
+  toast('Gerando Excel com '+mesReqs.length+' requisições...');
+  if(!mesReqs.length){toast('Nenhuma transferência em '+meses[mes]+'/'+ano+' 📭');return;}
 
   const wb = XLSX.utils.book_new();
 
@@ -981,6 +985,7 @@ function exportMes(){
   const nomeMes = meses[mes]+ano;
   XLSX.writeFile(wb,'consolidado_'+nomeMes+'.xlsx',{bookType:'xlsx',type:'binary'});
   toast('Consolidado do mês exportado! 📊');
+  }catch(e){alert('Erro ao gerar Excel: '+e.message);}
 }
 // ---- ABRIR FALTA (scroll to items) ----
 function abrirFalta(){

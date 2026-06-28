@@ -855,9 +855,9 @@ function exportConsolidado(){
       sheetData.push([it.n, parseFloat(it.q)||0, it.u]);
       // accumulate totals
       const key = it.n.toUpperCase()+'__'+it.u+'__'+(r.origem||'')+'__'+(r.destino||'');
-      if(!totals[key]) totals[key] = {c:it.c||'', n:it.n, u:it.u, origem:r.origem||'—', destino:r.destino||'—', qty:0, senhas:new Set()};
+      if(!totals[key]) totals[key] = {c:it.c||'', n:it.n, u:it.u, origem:r.origem||'—', destino:r.destino||'—', qty:0, senhas:[]};
       totals[key].qty += parseFloat(it.q)||0;
-      if(r.senhaEntrega) totals[key].senhas.add(r.senhaEntrega);
+      if(r.senhaEntrega && !totals[key].senhas.includes(r.senhaEntrega)) totals[key].senhas.push(r.senhaEntrega);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
@@ -878,7 +878,7 @@ function exportConsolidado(){
   ];
   Object.values(totals)
     .sort((a,b)=>a.n.localeCompare(b.n))
-    .forEach(item => consData.push([item.c||'', item.n, item.origem, item.destino, item.qty, item.u, item.senhas?[...item.senhas].join(', '):'—']));
+    .forEach(item => consData.push([item.c||'', item.n, item.origem, item.destino, item.qty, item.u, item.senhas&&item.senhas.length?item.senhas.join(', '):'—']));
 
   const wsConsolidado = XLSX.utils.aoa_to_sheet(consData);
   wsConsolidado['!cols'] = [{wch:8},{wch:40},{wch:12},{wch:12},{wch:10},{wch:10},{wch:15}];

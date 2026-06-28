@@ -886,7 +886,7 @@ function exportConsolidado(){
 
   // Download
   const dateStr = pad(new Date().getDate())+pad(new Date().getMonth()+1)+new Date().getFullYear();
-  XLSX.writeFile(wb, 'transferencias_'+dateStr+'.xlsx', {bookType:'xlsx', type:'binary'});
+  XLSX.writeFile(wb, 'transferencias_'+dateStr+'.xlsx');
   toast('Excel exportado! 📊');
 }
 
@@ -995,7 +995,7 @@ function exportMes(){
   XLSX.utils.book_append_sheet(wb, wsR, 'RESUMO GERAL');
 
   const nomeMes = meses[mes]+ano;
-  XLSX.writeFile(wb,'consolidado_'+nomeMes+'.xlsx',{bookType:'xlsx',type:'binary'});
+  XLSX.writeFile(wb,'consolidado_'+nomeMes+'.xlsx');
   toast('Consolidado do mês exportado! 📊');
   }catch(e){alert('Erro ao gerar Excel: '+e.message);}
 }

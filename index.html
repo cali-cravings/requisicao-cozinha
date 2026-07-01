@@ -174,6 +174,14 @@ textarea{resize:none;line-height:1.5}
 .btn-falta:active{background:#faeeda}
 .btn-falta.marcado{border-color:#e8560a;color:#e8560a;background:#fdf0ea}
 .alerta-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;background:#faeeda;color:#854f0b;flex-shrink:0}
+
+/* MODAL MES */
+.modal-mes-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-mes-overlay.show{display:flex}
+.modal-mes-box{background:var(--surf);border-radius:16px;padding:28px 24px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+.modal-mes-box h2{font-size:18px;font-weight:700;color:var(--tx);margin-bottom:6px}
+.modal-mes-box p{font-size:13px;color:var(--tx2);margin-bottom:18px}
+.modal-mes-selects{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -221,7 +229,7 @@ if('serviceWorker' in navigator){
     </div>
     <button class="btn-or" onclick="goTo('s-form')"><i class="ti ti-plus"></i> Nova requisição</button>
     <button class="btn-excel-home" onclick="exportConsolidado()"><i class="ti ti-file-spreadsheet"></i> Exportar consolidado do dia</button>
-    <button class="btn-excel-home" onclick="exportMes()" style="margin-top:-4px"><i class="ti ti-calendar-stats"></i> Exportar consolidado do mês</button>
+    <button class="btn-excel-home" onclick="abrirModalMes()" style="margin-top:-4px"><i class="ti ti-calendar-stats"></i> Exportar consolidado do mês</button>
     <div>
       <div class="sec-l">Requisições recentes</div>
       <div id="req-list" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -355,6 +363,36 @@ if('serviceWorker' in navigator){
     <div class="modal-btns">
       <button class="modal-cancel" onclick="closeDeleteModal()">Cancelar</button>
       <button class="modal-confirm" onclick="confirmDelete()">Excluir</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL SELECIONAR MES -->
+<div class="modal-mes-overlay" id="modal-mes">
+  <div class="modal-mes-box">
+    <h2>Selecionar período</h2>
+    <p>Escolha o mês e ano para exportar o consolidado.</p>
+    <div class="modal-mes-selects">
+      <select id="sel-mes">
+        <option value="0">Janeiro</option>
+        <option value="1">Fevereiro</option>
+        <option value="2">Março</option>
+        <option value="3">Abril</option>
+        <option value="4">Maio</option>
+        <option value="5">Junho</option>
+        <option value="6">Julho</option>
+        <option value="7">Agosto</option>
+        <option value="8">Setembro</option>
+        <option value="9">Outubro</option>
+        <option value="10">Novembro</option>
+        <option value="11">Dezembro</option>
+      </select>
+      <select id="sel-ano"></select>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeMesModal()">Cancelar</button>
+      <button class="modal-confirm" style="background:#2C3E35" onclick="confirmarExportMes()">Exportar</button>
     </div>
   </div>
 </div>
@@ -881,11 +919,9 @@ function exportConsolidado(){
   XLSX.writeFile(wb,'transferencias_'+dateStr+'.xlsx');
   toast('Excel exportado!');
 }
-function exportMes(){
+function exportMes(mes, ano){
   try{
-  const now = new Date();
-  const mes = now.getMonth();
-  const ano = now.getFullYear();
+  if(mes===undefined||mes===null){const now=new Date();mes=now.getMonth();ano=now.getFullYear();}
   const meses=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   if(!allReqs.length){toast('Carregando dados... tente novamente ⏳');return;}

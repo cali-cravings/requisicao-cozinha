@@ -919,6 +919,29 @@ function exportConsolidado(){
   XLSX.writeFile(wb,'transferencias_'+dateStr+'.xlsx');
   toast('Excel exportado!');
 }
+// ---- MODAL SELECIONAR MES ----
+function abrirModalMes(){
+  const anoSel = document.getElementById('sel-ano');
+  anoSel.innerHTML = '';
+  const now = new Date();
+  for(let y = now.getFullYear(); y >= now.getFullYear()-2; y--){
+    const o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    anoSel.appendChild(o);
+  }
+  document.getElementById('sel-mes').value = now.getMonth();
+  document.getElementById('modal-mes').classList.add('show');
+}
+function closeMesModal(){
+  document.getElementById('modal-mes').classList.remove('show');
+}
+function confirmarExportMes(){
+  const mes = parseInt(document.getElementById('sel-mes').value);
+  const ano = parseInt(document.getElementById('sel-ano').value);
+  closeMesModal();
+  exportMes(mes, ano);
+}
+
 function exportMes(mes, ano){
   try{
   if(mes===undefined||mes===null){const now=new Date();mes=now.getMonth();ano=now.getFullYear();}

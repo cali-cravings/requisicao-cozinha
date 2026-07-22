@@ -432,6 +432,32 @@ if('serviceWorker' in navigator){
       <input type="file" id="est-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importarEstoque()">
       <button class="btn-or" onclick="document.getElementById('est-file').click()"><i class="ti ti-upload"></i> Importar planilha</button>
     </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="clb">ADICIONAR / ATUALIZAR PRODUTO</div>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:10px">Selecione o estoque e preencha os dados do produto</p>
+      <select id="est-sel-manual" class="finp" style="margin-bottom:8px">
+        <option value="">Selecione o estoque</option>
+        <option>MASHA ADM</option>
+        <option>MASHA PIER</option>
+        <option>LINHA</option>
+        <option>BAR</option>
+        <option>CALI CAFÉ</option>
+      </select>
+      <input id="est-man-cod" type="number" class="finp" placeholder="Código (opcional)" style="margin-bottom:8px">
+      <input id="est-man-nome" type="text" class="finp" placeholder="Nome do produto *" style="margin-bottom:8px" oninput="buscarProdutoManual()">
+      <div id="est-man-sug" style="display:none;background:var(--surf);border:.5px solid var(--bdr2);border-radius:8px;margin-bottom:8px;max-height:150px;overflow-y:auto"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <select id="est-man-un" class="finp">
+          <option>UN</option><option>KG</option><option>G</option><option>L</option>
+          <option>ML</option><option>CX</option><option>FD</option><option>PC</option>
+          <option>PT</option><option>BD</option><option>DZ</option><option>BR</option>
+          <option>SACO</option><option>LATA</option>
+        </select>
+        <input id="est-man-saldo" type="number" class="finp" placeholder="Saldo" min="0" step="0.5">
+      </div>
+      <button class="btn-or" onclick="salvarProdutoManual()"><i class="ti ti-device-floppy"></i> Salvar produto</button>
+    </div>
+
     <div class="card">
       <div class="clb">SALDOS ATUAIS</div>
       <select id="est-sel-view" class="finp" style="margin-bottom:12px" onchange="renderEstoque()">
@@ -1233,6 +1259,63 @@ function confirmDelete(){
   closeDeleteModal();
   deleteFromFB(currentDetail.fbKey);
   toast('Excluída ✓'); goTo('s-home');
+}
+
+function buscarProdutoManual(){
+  const q = document.getElementById('est-man-nome').value.trim();
+  const sug = document.getElementById('est-man-sug');
+  if(q.length < 2){sug.style.display='none';return;}
+  const t = q.toUpperCase().normalize('NFD').replace(/\p{Diacritic}/gu,'');
+  const results = DB.filter(i=>i.n.toUpperCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').includes(t)).slice(0,6);
+  if(!results.length){sug.style.display='none';return;}
+  sug.innerHTML = results.map((item,i)=>
+    '<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:.5px solid var(--bdr)" '+
+    'onclick="selecionarProdutoManual('+i+')" data-i="'+i+'">'+
+    (item.c?'<span style="font-size:10px;color:var(--tx2);margin-right:6px">#'+item.c+'</span>':'')+
+    item.n+'</div>'
+  ).join('');
+  sug._results = results;
+  sug.style.display='block';
+}
+
+function selecionarProdutoManual(idx){
+  const sug = document.getElementById('est-man-sug');
+  const item = sug._results[idx];
+  if(!item) return;
+  document.getElementById('est-man-nome').value = item.n;
+  if(item.c) document.getElementById('est-man-cod').value = item.c;
+  const unSel = document.getElementById('est-man-un');
+  const fi = [...unSel.options].findIndex(o=>o.value.toLowerCase()===item.u.toLowerCase());
+  if(fi>=0) unSel.selectedIndex=fi;
+  sug.style.display='none';
+  document.getElementById('est-man-saldo').focus();
+}
+
+function salvarProdutoManual(){
+  const estoque = document.getElementById('est-sel-manual').value;
+  const cod     = document.getElementById('est-man-cod').value.trim();
+  const nome    = document.getElementById('est-man-nome').value.trim().toUpperCase();
+  const un      = document.getElementById('est-man-un').value;
+  const saldo   = parseFloat(document.getElementById('est-man-saldo').value)||0;
+
+  if(!estoque){toast('Selecione o estoque');return;}
+  if(!nome){toast('Informe o nome do produto');return;}
+
+  const key = cod || nome.replace(/[^A-Z0-9]/g,'_').slice(0,20);
+  const data = {c: cod?Number(cod):0, n:nome, u:un, saldo:saldo};
+
+  EST_REF.child(estoque).child(key).set(data);
+  toast('Produto salvo em '+estoque+' ✓');
+
+  // Clear form
+  document.getElementById('est-man-cod').value='';
+  document.getElementById('est-man-nome').value='';
+  document.getElementById('est-man-saldo').value='';
+  document.getElementById('est-man-sug').style.display='none';
+
+  // Refresh saldo view
+  document.getElementById('est-sel-view').value=estoque;
+  setTimeout(renderEstoque, 800);
 }
 
 function renderEstoque(){

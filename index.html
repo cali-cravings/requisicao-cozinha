@@ -425,7 +425,7 @@ if('serviceWorker' in navigator){
   <div class="pad">
     <div class="card" style="margin-bottom:12px">
       <div class="clb">IMPORTAR VIA EXCEL</div>
-      <p style="font-size:13px;color:var(--tx2);margin-bottom:10px">Selecione o estoque e importe a planilha com: Código, Produto, Unidade, Saldo</p>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:10px">Use o Gabarito padrão do Allfood com as colunas: COD, DESCRIÇÃO, UN, CLASSE, SUB CLASSE, QUANTIDADE</p>
       <select id="est-sel-import" class="finp" style="margin-bottom:10px">
         <option value="">Selecione o estoque</option>
         <option>MASHA ADM</option>
@@ -1428,37 +1428,59 @@ function importarEstoque(){
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
 
-      // Find header row (contains COD or CODIGO)
-      let headerIdx = 0;
-      for(let i=0;i<Math.min(10,rows.length);i++){
-        const row = rows[i].map(c=>String(c).toUpperCase());
-        if(row.some(c=>c.includes('COD')||c.includes('CÓD'))){
-          headerIdx = i; break;
+      // Find header row — look for row containing COD and DESCRICAO/DESCRIÇÃO
+      let headerIdx = -1;
+      for(let i=0;i<Math.min(15,rows.length);i++){
+        const row = rows[i].map(c=>String(c).toUpperCase().trim());
+        if(row.some(c=>c==='COD'||c==='CÓD.'||c==='CÓD. INT.'||c.includes('COD'))){
+          if(row.some(c=>c.includes('DESC')||c.includes('NOME'))){
+            headerIdx = i; break;
+          }
         }
       }
-      const headers = rows[headerIdx].map(c=>String(c).toUpperCase().trim());
-      const iCod  = headers.findIndex(h=>h.includes('COD')||h.includes('CÓD'));
-      const iNome = headers.findIndex(h=>h.includes('DESC')||h.includes('NOME')||h.includes('PRODUTO'));
-      const iUn   = headers.findIndex(h=>h.includes('UN'));
-      const iSaldo= headers.findIndex(h=>h.includes('SALDO')||h.includes('QUANT')||h.includes('ESTOQUE'));
+      if(headerIdx<0){toast('Cabeçalho não encontrado. Use o Gabarito padrão.');return;}
 
-      if(iNome<0){toast('Coluna de produto não encontrada');return;}
+      const headers = rows[headerIdx].map(c=>String(c).toUpperCase().trim());
+      // Map columns by name — supports both Gabarito and generic formats
+      const iCod   = headers.findIndex(h=>h==='COD'||h==='CÓD.'||h==='CÓD. INT.'||h.startsWith('COD'));
+      const iNome  = headers.findIndex(h=>h==='DESCRIÇÃO'||h==='DESCRICAO'||h.includes('DESC'));
+      const iUn    = headers.findIndex(h=>h==='UN'||h==='UN,VENDA'||h==='UN.VENDA'||h.startsWith('UN'));
+      const iSaldo = headers.findIndex(h=>h==='QUANTIDADE'||h==='SALDO'||h.includes('QUANT')||h.includes('SALDO'));
+
+      if(iNome<0){toast('Coluna DESCRIÇÃO não encontrada');return;}
 
       const updates = {};
-      let count = 0;
+      let count = 0, semQtd = 0;
+
       rows.slice(headerIdx+1).forEach(row=>{
-        const cod   = iCod>=0  ? String(row[iCod]||'').trim()  : '';
+        const cod   = iCod>=0   ? String(row[iCod]||'').trim()   : '';
         const nome  = String(row[iNome]||'').trim();
-        const un    = iUn>=0   ? String(row[iUn]||'UN').trim() : 'UN';
-        const saldo = iSaldo>=0? parseFloat(row[iSaldo])||0     : 0;
+        const un    = iUn>=0    ? String(row[iUn]||'UN').trim()  : 'UN';
+        const saldo = iSaldo>=0 ? parseFloat(row[iSaldo])||0      : 0;
+
         if(!nome) return;
-        const key = cod || nome.toUpperCase().replace(/[^A-Z0-9]/g,'_').slice(0,20);
-        updates[key] = {c:cod?Number(cod):0, n:nome.toUpperCase(), u:un, saldo:saldo};
+
+        // Clean unit
+        const unClean = un.replace(/[^A-Za-z]/g,'').toUpperCase();
+        const unFinal = ['KG','G','L','ML','UN','CX','FD','PC','PT','BD','DZ','BR','SACO','LATA'].includes(unClean) ? unClean : 'UN';
+
+        const key = cod ? String(Number(cod)||cod) : nome.toUpperCase().replace(/[^A-Z0-9]/g,'_').slice(0,20);
+        updates[key] = {
+          c: cod ? (Number(cod)||0) : 0,
+          n: nome.toUpperCase(),
+          u: unFinal,
+          saldo: saldo
+        };
         count++;
+        if(saldo===0) semQtd++;
       });
 
+      if(!count){toast('Nenhum produto encontrado na planilha');return;}
+
       EST_REF.child(sel).update(updates);
-      toast(count+' produtos importados para '+sel+' ✓');
+      let msg = count+' produtos importados para '+sel+' ✓';
+      if(semQtd>0) msg += ' ('+semQtd+' sem quantidade)';
+      toast(msg);
       document.getElementById('est-file').value='';
       document.getElementById('est-sel-view').value=sel;
       setTimeout(renderEstoque, 1000);

@@ -861,8 +861,8 @@ function addItem(){
       if(s!==null){
         qtyInp.max=s.saldo;
         if(s.saldo<=0){
-          qtyInp.placeholder='Sem estoque';
-          toast('⚠️ Produto sem saldo em '+origem);
+          qtyInp.placeholder='0 (em falta)';
+          toast('⚠️ Sem saldo em '+origem+' — informe 0 e adicione observação');
         } else {
           qtyInp.placeholder='Max: '+s.saldo;
         }
@@ -927,11 +927,8 @@ function validarSaldos(items){
   for(const it of items){
     const s = getSaldo(origem, it.n, it.c);
     if(s!==null){
-      if(s.saldo<=0){
-        alert('Produto sem saldo em estoque: '+it.n+'\nSaldo atual: 0 '+s.u);
-        return false;
-      }
-      if(parseFloat(it.q)>s.saldo){
+      // Allow qty 0 (used to flag falta)
+      if(parseFloat(it.q)>s.saldo && parseFloat(it.q)>0){
         alert('Quantidade solicitada maior que o saldo disponível:\n'+it.n+'\nSolicitado: '+it.q+' | Disponível: '+s.saldo+' '+s.u);
         return false;
       }

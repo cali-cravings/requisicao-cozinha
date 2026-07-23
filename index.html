@@ -246,11 +246,32 @@ if('serviceWorker' in navigator){
     </div>
     <button class="btn-or" onclick="goTo('s-form')"><i class="ti ti-plus"></i> Nova requisição</button>
     <button class="btn-excel-home" onclick="exportConsolidado()"><i class="ti ti-file-spreadsheet"></i> Exportar consolidado do dia</button>
+    <button class="btn-excel-home" onclick="goTo('s-consulta')" style="border-color:#2C3E35;color:#2C3E35"><i class="ti ti-search"></i> Consultar estoque</button>
     <button class="btn-excel-home" onclick="abrirGestaoEstoque()" style="border-color:#2C3E35;color:#2C3E35"><i class="ti ti-package"></i> Gestão de estoque</button>
     <button class="btn-excel-home" onclick="abrirModalMes()"  style="margin-top:-4px"><i class="ti ti-calendar-stats"></i> Exportar consolidado do mês</button>
     <div>
       <div class="sec-l">Requisições recentes</div>
       <div id="req-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TELA CONSULTA DE ESTOQUE -->
+<div class="screen" id="s-consulta">
+  <div class="hdr">
+    <button class="hbk" onclick="goTo('s-home')"><i class="ti ti-arrow-left"></i></button>
+    <div class="htxt"><h1>Consultar Estoque</h1><p>Saldos disponíveis</p></div>
+  </div>
+  <div class="pad">
+    <div class="card">
+      <div class="clb">SELECIONE O ESTOQUE</div>
+      <select id="cons-sel" class="finp" style="margin-bottom:12px" onchange="renderConsulta()">
+        <option value="">Selecione o estoque</option>
+        <option>MASHA ADM</option>
+        <option>MASHA PIER</option>
+      </select>
+      <input id="cons-busca" type="text" class="finp" placeholder="Buscar produto..." oninput="renderConsulta()" style="margin-bottom:12px" autocomplete="off">
+      <div id="cons-list"></div>
     </div>
   </div>
 </div>
@@ -1332,6 +1353,29 @@ function zerarEstoque(){
   EST_REF.child(sel).remove();
   toast('Estoque '+sel+' zerado ✓');
   setTimeout(renderEstoque, 500);
+}
+
+function renderConsulta(){
+  const sel  = document.getElementById('cons-sel').value;
+  const busca = (document.getElementById('cons-busca').value||'').toUpperCase().trim();
+  const list = document.getElementById('cons-list');
+  if(!sel){list.innerHTML='';return;}
+  const data = estoqueData[sel] || {};
+  let items = Object.values(data).sort((a,b)=>a.n.localeCompare(b.n));
+  if(busca) items = items.filter(i=>i.n.includes(busca));
+  if(!items.length){
+    list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto encontrado.</div>';
+    return;
+  }
+  list.innerHTML = items.map(item=>{
+    const cls = item.saldo<=0?'zero':item.saldo<=5?'baixo':'';
+    const icon = item.saldo<=0?'🔴':item.saldo<=5?'🟠':'🟢';
+    return '<div class="saldo-row">'+
+      '<span style="margin-right:6px">'+icon+'</span>'+
+      '<span class="saldo-nm" style="font-size:13px">'+(item.c?'<span class="saldo-cod">#'+item.c+'</span> ':'')+item.n+'</span>'+
+      '<span class="saldo-val '+cls+'">'+item.saldo+' '+item.u+'</span>'+
+    '</div>';
+  }).join('');
 }
 
 function renderEstoque(){

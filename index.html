@@ -273,38 +273,6 @@ if('serviceWorker' in navigator){
       <input id="cons-busca" type="text" class="finp" placeholder="Buscar produto..." oninput="renderConsulta()" style="margin-bottom:12px" autocomplete="off">
       <div id="cons-list"></div>
     </div>
-    <!-- RELATÓRIOS -->
-    <div class="card" style="margin-top:12px">
-      <div class="clb">📊 RELATÓRIOS</div>
-
-      <!-- Filtros -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-        <div>
-          <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">Data início</label>
-          <input type="date" id="rel-dt-ini" class="finp" style="padding:9px">
-        </div>
-        <div>
-          <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">Data fim</label>
-          <input type="date" id="rel-dt-fim" class="finp" style="padding:9px">
-        </div>
-      </div>
-      <select id="rel-estoque" class="finp" style="margin-bottom:12px">
-        <option value="">Todos os estoques</option>
-        <option>MASHA ADM</option>
-        <option>MASHA PIER</option>
-        <option>LINHA</option>
-        <option>BAR</option>
-        <option>CALI CAFÉ</option>
-      </select>
-
-      <!-- Botões -->
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <button class="btn-excel-home" onclick="relPosicao()" style="border-color:#1d9e75;color:#1d9e75"><i class="ti ti-clipboard-list"></i> Posição do estoque</button>
-        <button class="btn-excel-home" onclick="relMovimentacao()" style="border-color:#185fa5;color:#185fa5"><i class="ti ti-arrows-exchange"></i> Movimentação entre estoques</button>
-        <button class="btn-excel-home" onclick="relRanking()" style="border-color:#8B7355;color:#8B7355"><i class="ti ti-trophy"></i> Ranking de produtos</button>
-        <button class="btn-excel-home" onclick="relGiro()" style="border-color:#e8560a;color:#e8560a"><i class="ti ti-chart-bar"></i> Giro de estoque</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -427,8 +395,8 @@ if('serviceWorker' in navigator){
 <!-- MODAL SENHA EXCLUSAO -->
 <div class="modal-overlay" id="modal-delete">
   <div class="modal-box">
-    <h2>Excluir requisicao</h2>
-    <p>Digite a senha de administrador para confirmar a exclusao.</p>
+    <h2 id="modal-delete-title">Excluir requisicao</h2>
+    <p id="modal-delete-desc">Digite a senha de administrador para confirmar a exclusao.</p>
     <label class="modal-field-label">Senha</label>
     <input class="modal-input" id="modal-delete-input" type="password" placeholder="••••••" maxlength="10">
     <div class="modal-btns">
@@ -533,6 +501,35 @@ if('serviceWorker' in navigator){
         <option>CALI CAFÉ</option>
       </select>
       <div id="est-list"></div>
+    </div>
+
+    <!-- RELATÓRIOS -->
+    <div class="card" style="margin-top:12px">
+      <div class="clb">📊 RELATÓRIOS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">Data início</label>
+          <input type="date" id="rel-dt-ini" class="finp" style="padding:9px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">Data fim</label>
+          <input type="date" id="rel-dt-fim" class="finp" style="padding:9px">
+        </div>
+      </div>
+      <select id="rel-estoque" class="finp" style="margin-bottom:12px">
+        <option value="">Todos os estoques</option>
+        <option>MASHA ADM</option>
+        <option>MASHA PIER</option>
+        <option>LINHA</option>
+        <option>BAR</option>
+        <option>CALI CAFÉ</option>
+      </select>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn-excel-home" onclick="relPosicao()" style="border-color:#1d9e75;color:#1d9e75"><i class="ti ti-clipboard-list"></i> Posição do estoque</button>
+        <button class="btn-excel-home" onclick="relMovimentacao()" style="border-color:#185fa5;color:#185fa5"><i class="ti ti-arrows-exchange"></i> Movimentação entre estoques</button>
+        <button class="btn-excel-home" onclick="relRanking()" style="border-color:#8B7355;color:#8B7355"><i class="ti ti-trophy"></i> Ranking de produtos</button>
+        <button class="btn-excel-home" onclick="relGiro()" style="border-color:#e8560a;color:#e8560a"><i class="ti ti-chart-bar"></i> Giro de estoque</button>
+      </div>
     </div>
   </div>
 </div>
@@ -728,6 +725,9 @@ function row(k,v){return '<div class="dr"><span class="dk">'+k+'</span><span cla
 function deleteReq(){
   if(!currentDetail) return;
   document.getElementById('modal-delete-input').value='';
+  document.getElementById('modal-delete-title').textContent='Excluir requisicao';
+  document.getElementById('modal-delete-desc').textContent='Digite a senha de administrador para confirmar a exclusao.';
+  window._estoqueMode = false;
   document.getElementById('modal-delete').classList.add('show');
   setTimeout(()=>document.getElementById('modal-delete-input').focus(),100);
 }
@@ -1502,9 +1502,9 @@ function toggleFalta(idx){
 // ---- GESTÃO DE ESTOQUE ----
 
 function abrirGestaoEstoque(){
-  const senha = document.getElementById('modal-senha-input');
-  // Use a simple prompt alternative - reuse delete modal with different callback
   document.getElementById('modal-delete-input').value='';
+  document.getElementById('modal-delete-title').textContent='Gestao de Estoque';
+  document.getElementById('modal-delete-desc').textContent='Digite a senha para acessar a gestao de estoque.';
   window._estoqueMode = true;
   document.getElementById('modal-delete').classList.add('show');
   setTimeout(()=>document.getElementById('modal-delete-input').focus(),100);

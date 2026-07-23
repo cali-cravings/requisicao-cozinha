@@ -481,7 +481,10 @@ if('serviceWorker' in navigator){
         </select>
         <input id="est-man-saldo" type="number" class="finp" placeholder="Saldo" min="0" step="0.5">
       </div>
-      <button class="btn-or" onclick="salvarProdutoManual()"><i class="ti ti-device-floppy"></i> Salvar produto</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn-or" style="background:#2C3E35;font-size:13px" onclick="salvarProdutoManual('set')"><i class="ti ti-refresh"></i> Substituir saldo</button>
+        <button class="btn-or" style="font-size:13px" onclick="salvarProdutoManual('add')"><i class="ti ti-plus"></i> Somar ao estoque</button>
+      </div>
     </div>
 
     <div class="card">
@@ -1317,21 +1320,30 @@ function selecionarProdutoManual(idx){
   document.getElementById('est-man-saldo').focus();
 }
 
-function salvarProdutoManual(){
+function salvarProdutoManual(mode){
   const estoque = document.getElementById('est-sel-manual').value;
   const cod     = document.getElementById('est-man-cod').value.trim();
   const nome    = document.getElementById('est-man-nome').value.trim().toUpperCase();
   const un      = document.getElementById('est-man-un').value;
-  const saldo   = parseFloat(document.getElementById('est-man-saldo').value)||0;
+  const novoSaldo = parseFloat(document.getElementById('est-man-saldo').value)||0;
 
   if(!estoque){toast('Selecione o estoque');return;}
   if(!nome){toast('Informe o nome do produto');return;}
 
-  const key = cod || nome.replace(/[^A-Z0-9]/g,'_').slice(0,20);
-  const data = {c: cod?Number(cod):0, n:nome, u:un, saldo:saldo};
+  const key = cod ? String(Number(cod)||cod) : nome.replace(/[^A-Z0-9]/g,'_').slice(0,20);
 
-  EST_REF.child(estoque).child(key).set(data);
-  toast('Produto salvo em '+estoque+' ✓');
+  if(mode==='add'){
+    // Sum to existing stock
+    const atual = estoqueData[estoque]?.[key];
+    const saldoAtual = atual ? (parseFloat(atual.saldo)||0) : 0;
+    const saldoFinal = saldoAtual + novoSaldo;
+    EST_REF.child(estoque).child(key).set({c: cod?Number(cod):0, n:nome, u:un, saldo:saldoFinal});
+    toast('Somado! Novo saldo: '+saldoFinal+' '+un+' ✓');
+  } else {
+    // Replace stock
+    EST_REF.child(estoque).child(key).set({c: cod?Number(cod):0, n:nome, u:un, saldo:novoSaldo});
+    toast('Saldo substituído: '+novoSaldo+' '+un+' ✓');
+  }
 
   // Clear form
   document.getElementById('est-man-cod').value='';

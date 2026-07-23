@@ -273,6 +273,38 @@ if('serviceWorker' in navigator){
       <input id="cons-busca" type="text" class="finp" placeholder="Buscar produto..." oninput="renderConsulta()" style="margin-bottom:12px" autocomplete="off">
       <div id="cons-list"></div>
     </div>
+    <!-- RELATÓRIOS -->
+    <div class="card" style="margin-top:12px">
+      <div class="clb">📊 RELATÓRIOS</div>
+
+      <!-- Filtros -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+        <div>
+          <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">Data início</label>
+          <input type="date" id="rel-dt-ini" class="finp" style="padding:9px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--tx2);display:block;margin-bottom:4px">Data fim</label>
+          <input type="date" id="rel-dt-fim" class="finp" style="padding:9px">
+        </div>
+      </div>
+      <select id="rel-estoque" class="finp" style="margin-bottom:12px">
+        <option value="">Todos os estoques</option>
+        <option>MASHA ADM</option>
+        <option>MASHA PIER</option>
+        <option>LINHA</option>
+        <option>BAR</option>
+        <option>CALI CAFÉ</option>
+      </select>
+
+      <!-- Botões -->
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn-excel-home" onclick="relPosicao()" style="border-color:#1d9e75;color:#1d9e75"><i class="ti ti-clipboard-list"></i> Posição do estoque</button>
+        <button class="btn-excel-home" onclick="relMovimentacao()" style="border-color:#185fa5;color:#185fa5"><i class="ti ti-arrows-exchange"></i> Movimentação entre estoques</button>
+        <button class="btn-excel-home" onclick="relRanking()" style="border-color:#8B7355;color:#8B7355"><i class="ti ti-trophy"></i> Ranking de produtos</button>
+        <button class="btn-excel-home" onclick="relGiro()" style="border-color:#e8560a;color:#e8560a"><i class="ti ti-chart-bar"></i> Giro de estoque</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -601,6 +633,7 @@ function goTo(id){
   window.scrollTo(0,0);
   if(id==='s-home') renderHome();
   if(id==='s-form' && !editingId) initForm();
+  if(id==='s-estoque') initRelDates();
 }
 
 // ---- TOAST ----
@@ -1078,6 +1111,214 @@ function exportConsolidado(){
   XLSX.writeFile(wb,'transferencias_'+dateStr+'.xlsx');
   toast('Excel exportado!');
 }
+// ---- RELATÓRIOS DE ESTOQUE ----
+
+function initRelDates(){
+  const now = new Date();
+  const ini = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fim = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  document.getElementById('rel-dt-ini').value = ini.toISOString().split('T')[0];
+  document.getElementById('rel-dt-fim').value = fim.toISOString().split('T')[0];
+}
+
+function getRelFiltros(){
+  const dtIni = document.getElementById('rel-dt-ini').value;
+  const dtFim = document.getElementById('rel-dt-fim').value;
+  const est   = document.getElementById('rel-estoque').value;
+  const ini = dtIni ? new Date(dtIni+'T00:00:00') : null;
+  const fim = dtFim ? new Date(dtFim+'T23:59:59') : null;
+  const reqs = allReqs.filter(r=>{
+    const d = new Date(r.ts);
+    if(ini && d < ini) return false;
+    if(fim && d > fim) return false;
+    if(est && r.origem !== est && r.destino !== est) return false;
+    return true;
+  });
+  return {ini, fim, est, reqs, dtIni, dtFim};
+}
+
+function fmtMoney(v){ return 'R$ '+Number(v||0).toFixed(2).replace('.',','); }
+function fmtPeriod(ini,fim){
+  const f = d=>d?new Date(d+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+  return f(ini)+' a '+f(fim);
+}
+
+// 1. POSIÇÃO DO ESTOQUE
+function relPosicao(){
+  const {est, dtIni, dtFim} = getRelFiltros();
+  const estoques = est ? [est] : ['MASHA ADM','MASHA PIER','LINHA','BAR','CALI CAFÉ'];
+  const wb = XLSX.utils.book_new();
+  let totalGeral = 0;
+
+  estoques.forEach(nome=>{
+    const data = estoqueData[nome];
+    if(!data||!Object.keys(data).length) return;
+    const items = Object.values(data).sort((a,b)=>a.n.localeCompare(b.n));
+
+    const rows = [
+      ['POSIÇÃO DE ESTOQUE — '+nome,'','','',''],
+      ['Período',fmtPeriod(dtIni,dtFim),'','',''],
+      ['','','','',''],
+      ['CÓD.','PRODUTO','UNIDADE','SALDO','CUSTO MÉD.','VALOR TOTAL'],
+    ];
+    let totalEst = 0;
+    items.forEach(it=>{
+      const valor = (it.saldo||0)*(it.custo||0);
+      totalEst += valor;
+      rows.push([it.c||'', it.n, it.u, it.saldo||0, it.custo||0, valor]);
+    });
+    rows.push(['','','','','TOTAL',totalEst]);
+    totalGeral += totalEst;
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:8},{wch:40},{wch:8},{wch:10},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws, nome.slice(0,28));
+  });
+
+  const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  XLSX.writeFile(wb,'posicao_estoque_'+dateStr+'.xlsx');
+  toast('Posição do estoque exportada 📊');
+}
+
+// 2. MOVIMENTAÇÃO ENTRE ESTOQUES
+function relMovimentacao(){
+  const {reqs, dtIni, dtFim, est} = getRelFiltros();
+  const delivered = reqs.filter(r=>r.status==='delivered');
+  if(!delivered.length){toast('Sem transferências no período');return;}
+
+  const wb = XLSX.utils.book_new();
+  const routes = {};
+
+  delivered.forEach(r=>{
+    const key = (r.origem||'—')+'→'+(r.destino||'—');
+    if(!routes[key]) routes[key]={origem:r.origem||'—',destino:r.destino||'—',items:{}};
+    r.items.forEach(it=>{
+      const pKey = it.n.toUpperCase();
+      if(!routes[key].items[pKey]) routes[key].items[pKey]={c:it.c||'',n:it.n,u:it.u,qty:0,valor:0};
+      const qty = parseFloat(it.q)||0;
+      routes[key].items[pKey].qty += qty;
+      // Get custo from estoqueData
+      const prod = getSaldo(r.origem||'', it.n, it.c);
+      routes[key].items[pKey].valor += qty*(prod?prod.custo||0:0);
+    });
+  });
+
+  // One sheet per route
+  const usedNames = {};
+  Object.values(routes).forEach(route=>{
+    const rows = [
+      ['MOVIMENTAÇÃO: '+route.origem+' → '+route.destino,'','',''],
+      ['Período',fmtPeriod(dtIni,dtFim),'',''],
+      ['','','',''],
+      ['CÓD.','PRODUTO','QTD','UNIDADE','VALOR TOTAL'],
+    ];
+    let total = 0;
+    Object.values(route.items).sort((a,b)=>a.n.localeCompare(b.n)).forEach(it=>{
+      rows.push([it.c||'', it.n, it.qty, it.u, it.valor]);
+      total += it.valor;
+    });
+    rows.push(['','','','TOTAL',total]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:8},{wch:35},{wch:10},{wch:8},{wch:14}];
+    const orig = (route.origem||'').slice(0,8).replace(/ /g,'');
+    const dest = (route.destino||'').slice(0,8).replace(/ /g,'');
+    let sName = (orig+'-'+dest).slice(0,28);
+    if(usedNames[sName]!==undefined){usedNames[sName]++;sName=(sName+'_'+usedNames[sName]).slice(0,31);}
+    else usedNames[sName]=0;
+    XLSX.utils.book_append_sheet(wb, ws, sName);
+  });
+
+  const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  XLSX.writeFile(wb,'movimentacao_'+dateStr+'.xlsx');
+  toast('Movimentação exportada 📊');
+}
+
+// 3. RANKING DE PRODUTOS MAIS SOLICITADOS
+function relRanking(){
+  const {reqs, dtIni, dtFim} = getRelFiltros();
+  if(!reqs.length){toast('Sem requisições no período');return;}
+
+  const produtos = {};
+  reqs.forEach(r=>{
+    r.items.forEach(it=>{
+      const key = it.n.toUpperCase();
+      if(!produtos[key]) produtos[key]={c:it.c||'',n:it.n,u:it.u,qty:0,vezes:0,valor:0};
+      const qty = parseFloat(it.q)||0;
+      produtos[key].qty += qty;
+      produtos[key].vezes += 1;
+      const prod = getSaldo(r.origem||'', it.n, it.c);
+      produtos[key].valor += qty*(prod?prod.custo||0:0);
+    });
+  });
+
+  const sorted = Object.values(produtos).sort((a,b)=>b.vezes-a.vezes);
+  const wb = XLSX.utils.book_new();
+
+  const rows = [
+    ['RANKING DE PRODUTOS MAIS SOLICITADOS','','','',''],
+    ['Período',fmtPeriod(dtIni,dtFim),'','',''],
+    ['Total de requisições',reqs.length,'','',''],
+    ['','','','',''],
+    ['#','PRODUTO','TOTAL QTD','Nº VEZES','UNIDADE','VALOR TOTAL'],
+  ];
+  sorted.forEach((p,i)=>{
+    rows.push([i+1, p.n, p.qty, p.vezes, p.u, p.valor]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:4},{wch:40},{wch:10},{wch:10},{wch:8},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws, 'RANKING');
+
+  const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  XLSX.writeFile(wb,'ranking_produtos_'+dateStr+'.xlsx');
+  toast('Ranking exportado 📊');
+}
+
+// 4. GIRO DE ESTOQUE
+function relGiro(){
+  const {reqs, dtIni, dtFim, est} = getRelFiltros();
+  const estoques = est ? [est] : ['MASHA ADM','MASHA PIER','LINHA','BAR','CALI CAFÉ'];
+  const wb = XLSX.utils.book_new();
+
+  estoques.forEach(nome=>{
+    const data = estoqueData[nome];
+    if(!data||!Object.keys(data).length) return;
+
+    // Calculate outflow from delivered reqs where origem = this estoque
+    const saidas = {};
+    reqs.filter(r=>r.status==='delivered'&&r.origem===nome).forEach(r=>{
+      r.items.forEach(it=>{
+        const key = it.n.toUpperCase();
+        if(!saidas[key]) saidas[key]={c:it.c||'',n:it.n,u:it.u,saida:0};
+        saidas[key].saida += parseFloat(it.q)||0;
+      });
+    });
+
+    const items = Object.values(data).sort((a,b)=>a.n.localeCompare(b.n));
+    const rows = [
+      ['GIRO DE ESTOQUE — '+nome,'','','',''],
+      ['Período',fmtPeriod(dtIni,dtFim),'','',''],
+      ['','','','',''],
+      ['CÓD.','PRODUTO','SALDO ATUAL','SAÍDAS','UNIDADE','CUSTO MÉD.','VALOR SAÍDAS'],
+    ];
+
+    items.forEach(it=>{
+      const s = saidas[it.n.toUpperCase()]||{saida:0};
+      const valorSaida = s.saida*(it.custo||0);
+      rows.push([it.c||'', it.n, it.saldo||0, s.saida, it.u, it.custo||0, valorSaida]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:8},{wch:35},{wch:12},{wch:10},{wch:8},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws, nome.slice(0,28));
+  });
+
+  const dateStr = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  XLSX.writeFile(wb,'giro_estoque_'+dateStr+'.xlsx');
+  toast('Giro de estoque exportado 📊');
+}
+
 // ---- MODAL SELECIONAR MES ----
 function abrirModalMes(){
   const anoSel = document.getElementById('sel-ano');
@@ -1499,6 +1740,7 @@ function importarEstoque(){
       const iNome  = headers.findIndex(h=>h==='DESCRIÇÃO'||h==='DESCRICAO'||h.includes('DESC'));
       const iUn    = headers.findIndex(h=>h==='UN'||h==='UN,VENDA'||h==='UN.VENDA'||h.startsWith('UN'));
       const iSaldo = headers.findIndex(h=>h==='QUANTIDADE'||h==='SALDO'||h.includes('QUANT')||h.includes('SALDO'));
+      const iCusto = headers.findIndex(h=>h.includes('CUSTO')||h.includes('PRECO')||h.includes('PREÇO')||h.includes('VALOR'));
 
       if(iNome<0){toast('Coluna DESCRIÇÃO não encontrada');return;}
 
@@ -1518,11 +1760,13 @@ function importarEstoque(){
         const unFinal = ['KG','G','L','ML','UN','CX','FD','PC','PT','BD','DZ','BR','SACO','LATA'].includes(unClean) ? unClean : 'UN';
 
         const key = cod ? String(Number(cod)||cod) : nome.toUpperCase().replace(/[^A-Z0-9]/g,'_').slice(0,20);
+        const custo = iCusto>=0 ? parseFloat(String(row[iCusto]||'0').replace(',','.'))||0 : 0;
         updates[key] = {
           c: cod ? (Number(cod)||0) : 0,
           n: nome.toUpperCase(),
           u: unFinal,
-          saldo: saldo
+          saldo: saldo,
+          custo: custo
         };
         count++;
         if(saldo===0) semQtd++;

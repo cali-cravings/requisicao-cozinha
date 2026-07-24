@@ -608,22 +608,17 @@ function fmtTs(ts){
 function searchDB(q, origem){
   if(!q||q.length<2) return [];
   const t=norm(q);
-  let results = DB.filter(i=>norm(i.n).includes(t));
-  // Filter by active status if estoque is selected
-  if(origem && estoqueData[origem]){
+  // If origem is selected AND has products in estoque, filter strictly by estoque
+  if(origem && estoqueData[origem] && Object.keys(estoqueData[origem]).length>0){
     const data = estoqueData[origem];
-    results = results.filter(i=>{
-      // Find product in estoque by code or name
-      const key = i.c ? String(i.c) : null;
-      const byKey = key && data[key];
-      const byName = !byKey ? Object.values(data).find(d=>d.n===i.n) : null;
-      const prod = byKey || byName;
-      // If product exists in estoque, check ativo flag (default true)
-      if(prod) return prod.ativo !== false;
-      return true; // if not in estoque, show anyway
-    });
+    // Only show products that exist in this estoque AND are active
+    const estoqueItems = Object.values(data)
+      .filter(item => item.ativo !== false && norm(item.n).includes(t))
+      .map(item => ({c: item.c||0, n: item.n, u: item.u}));
+    return estoqueItems.slice(0,8);
   }
-  return results.slice(0,8);
+  // No estoque selected or empty estoque - search global DB
+  return DB.filter(i=>norm(i.n).includes(t)).slice(0,8);
 }
 
 let urgency='m', itemCount=0, currentDetail=null, editingId=null;
@@ -969,7 +964,15 @@ function addItem(){
     }
     sugBox.style.display='none'; qtyInp.focus();
   }
-  inp.addEventListener('input',()=>renderSug(searchDB(inp.value.trim(), document.getElementById('f-origem').value)));
+  inp.addEventListener('input',()=>{
+    const orig = document.getElementById('f-origem').value;
+    if(!orig){
+      sugBox.innerHTML='<div class="sug-item" style="color:var(--tx2);font-size:12px;pointer-events:none">⚠️ Selecione o Estoque Origem primeiro</div>';
+      sugBox.style.display='block';
+      return;
+    }
+    renderSug(searchDB(inp.value.trim(), orig));
+  });
   inp.addEventListener('focus',()=>{if(inp.value.trim().length>=2) renderSug(searchDB(inp.value.trim(), document.getElementById('f-origem').value));});
   inp.addEventListener('blur',()=>setTimeout(()=>{sugBox.style.display='none';},200));
   inp.focus();

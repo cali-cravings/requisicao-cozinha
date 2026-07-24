@@ -608,17 +608,23 @@ function fmtTs(ts){
 function searchDB(q, origem){
   if(!q||q.length<2) return [];
   const t=norm(q);
-  // If origem is selected AND has products in estoque, filter strictly by estoque
-  if(origem && estoqueData[origem] && Object.keys(estoqueData[origem]).length>0){
-    const data = estoqueData[origem];
-    // Only show products that exist in this estoque AND are active
-    const estoqueItems = Object.values(data)
-      .filter(item => item.ativo !== false && norm(item.n).includes(t))
-      .map(item => ({c: item.c||0, n: item.n, u: item.u}));
-    return estoqueItems.slice(0,8);
+  // Always filter by estoque when origem is selected
+  if(origem){
+    const data = estoqueData[origem]||{};
+    const keys = Object.keys(data);
+    if(keys.length>0){
+      // Estoque loaded - show only products from this estoque that are active
+      return Object.values(data)
+        .filter(item => item && item.n && item.ativo !== false && norm(item.n).includes(t))
+        .map(item => ({c: item.c||0, n: item.n, u: item.u||'UN'}))
+        .slice(0,8);
+    } else {
+      // Estoque selected but empty or not loaded yet
+      return [];
+    }
   }
-  // No estoque selected or empty estoque - search global DB
-  return DB.filter(i=>norm(i.n).includes(t)).slice(0,8);
+  // No estoque selected - show nothing (force user to select estoque first)
+  return [];
 }
 
 let urgency='m', itemCount=0, currentDetail=null, editingId=null;
@@ -968,6 +974,13 @@ function addItem(){
     const orig = document.getElementById('f-origem').value;
     if(!orig){
       sugBox.innerHTML='<div class="sug-item" style="color:var(--tx2);font-size:12px;pointer-events:none">⚠️ Selecione o Estoque Origem primeiro</div>';
+      sugBox.style.display='block';
+      return;
+    }
+    // Check if estoque has data
+    const est = estoqueData[orig]||{};
+    if(Object.keys(est).length===0){
+      sugBox.innerHTML='<div class="sug-item" style="color:var(--tx2);font-size:12px;pointer-events:none">📭 Estoque sem produtos cadastrados</div>';
       sugBox.style.display='block';
       return;
     }

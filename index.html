@@ -76,6 +76,17 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .sug-saldo.zero{color:#e24b4a}
 .sug-saldo.baixo{color:#e8560a}
 .clb{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);margin-bottom:10px}
+/* TOGGLE ATIVO/INATIVO */
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:.5px solid var(--bdr)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-nm{font-size:13px;color:var(--tx);flex:1;padding-right:10px}
+.toggle-cod{font-size:10px;color:var(--tx3);margin-right:6px}
+.toggle-sw{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle-sw input{opacity:0;width:0;height:0}
+.toggle-sl{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:24px;transition:.3s}
+.toggle-sl:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s}
+input:checked + .toggle-sl{background:#1d9e75}
+input:checked + .toggle-sl:before{transform:translateX(20px)}
 .btn-excel-home{background:none;border:.5px solid #2C3E35;border-radius:var(--r);padding:13px;font-size:14px;color:#2C3E35;cursor:pointer;width:100%;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
 .btn-excel-home:active{background:#EDE8DC}
 .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -503,6 +514,22 @@ if('serviceWorker' in navigator){
       <div id="est-list"></div>
     </div>
 
+    <!-- ATIVAR / DESATIVAR PRODUTOS -->
+    <div class="card" style="margin-top:12px">
+      <div class="clb">⚙️ ATIVAR / DESATIVAR PRODUTOS</div>
+      <p style="font-size:13px;color:var(--tx2);margin-bottom:10px">Produtos inativos não aparecem na busca de requisições deste estoque.</p>
+      <select id="ativ-sel" class="finp" style="margin-bottom:8px" onchange="renderAtivos()">
+        <option value="">Selecione o estoque</option>
+        <option>MASHA ADM</option>
+        <option>MASHA PIER</option>
+        <option>LINHA</option>
+        <option>BAR</option>
+        <option>CALI CAFÉ</option>
+      </select>
+      <input id="ativ-busca" type="text" class="finp" placeholder="Buscar produto..." oninput="renderAtivos()" style="margin-bottom:10px" autocomplete="off">
+      <div id="ativ-list"></div>
+    </div>
+
     <!-- RELATÓRIOS -->
     <div class="card" style="margin-top:12px">
       <div class="clb">📊 RELATÓRIOS</div>
@@ -578,10 +605,25 @@ function fmtTs(ts){
     ?'Hoje, '+pad(d.getHours())+':'+pad(d.getMinutes())
     :pad(d.getDate())+'/'+pad(d.getMonth()+1)+' '+pad(d.getHours())+':'+pad(d.getMinutes());
 }
-function searchDB(q){
+function searchDB(q, origem){
   if(!q||q.length<2) return [];
   const t=norm(q);
-  return DB.filter(i=>norm(i.n).includes(t)).slice(0,8);
+  let results = DB.filter(i=>norm(i.n).includes(t));
+  // Filter by active status if estoque is selected
+  if(origem && estoqueData[origem]){
+    const data = estoqueData[origem];
+    results = results.filter(i=>{
+      // Find product in estoque by code or name
+      const key = i.c ? String(i.c) : null;
+      const byKey = key && data[key];
+      const byName = !byKey ? Object.values(data).find(d=>d.n===i.n) : null;
+      const prod = byKey || byName;
+      // If product exists in estoque, check ativo flag (default true)
+      if(prod) return prod.ativo !== false;
+      return true; // if not in estoque, show anyway
+    });
+  }
+  return results.slice(0,8);
 }
 
 let urgency='m', itemCount=0, currentDetail=null, editingId=null;
@@ -927,8 +969,8 @@ function addItem(){
     }
     sugBox.style.display='none'; qtyInp.focus();
   }
-  inp.addEventListener('input',()=>renderSug(searchDB(inp.value.trim())));
-  inp.addEventListener('focus',()=>{if(inp.value.trim().length>=2) renderSug(searchDB(inp.value.trim()));});
+  inp.addEventListener('input',()=>renderSug(searchDB(inp.value.trim(), document.getElementById('f-origem').value)));
+  inp.addEventListener('focus',()=>{if(inp.value.trim().length>=2) renderSug(searchDB(inp.value.trim(), document.getElementById('f-origem').value));});
   inp.addEventListener('blur',()=>setTimeout(()=>{sugBox.style.display='none';},200));
   inp.focus();
 }
@@ -1111,6 +1153,48 @@ function exportConsolidado(){
   XLSX.writeFile(wb,'transferencias_'+dateStr+'.xlsx');
   toast('Excel exportado!');
 }
+// ---- ATIVAR / DESATIVAR PRODUTOS POR ESTOQUE ----
+// Structure: estoqueData[estoque][key].ativo = true/false
+
+function renderAtivos(){
+  const sel   = document.getElementById('ativ-sel').value;
+  const busca = (document.getElementById('ativ-busca').value||'').toUpperCase().trim();
+  const list  = document.getElementById('ativ-list');
+  if(!sel){list.innerHTML='';return;}
+
+  const data = estoqueData[sel]||{};
+  let items = Object.entries(data)
+    .map(([key,v])=>({key,...v}))
+    .sort((a,b)=>a.n.localeCompare(b.n));
+  if(busca) items = items.filter(i=>i.n.includes(busca));
+  if(!items.length){
+    list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto neste estoque.<br>Importe primeiro pelo Gabarito.</div>';
+    return;
+  }
+
+  list.innerHTML = items.map(item=>{
+    const ativo = item.ativo !== false; // default true
+    const tid = 'tog_'+item.key.replace(/[^a-z0-9]/gi,'_');
+    return '<div class="toggle-row">'+
+      '<span class="toggle-nm">'+
+        (item.c?'<span class="toggle-cod">#'+item.c+'</span>':'')+
+        item.n+
+      '</span>'+
+      '<label class="toggle-sw">'+
+        '<input type="checkbox" id="'+tid+'" '+(ativo?'checked':'')+
+        ' data-est="'+sel+'" data-key="'+item.key.replace(/"/g,'')+'"'+
+        ' onchange="toggleAtivo(this.dataset.est,this.dataset.key,this.checked)">'+
+        '<span class="toggle-sl"></span>'+
+      '</label>'+
+    '</div>';
+  }).join('');
+}
+
+function toggleAtivo(estoque, key, ativo){
+  EST_REF.child(estoque).child(key).update({ativo: ativo});
+  toast(ativo ? 'Produto ativado ✓' : 'Produto desativado ✗');
+}
+
 // ---- RELATÓRIOS DE ESTOQUE ----
 
 function initRelDates(){

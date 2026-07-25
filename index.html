@@ -825,6 +825,7 @@ function editReq(){
     const ninp=last.querySelector('.item-name-inp');
     ninp.value=it.n;
     ninp.dataset.cod=it.c||'';
+    ninp.dataset.valid='true'; // pre-existing items are valid
     last.querySelector('.item-qty-inp').value=it.q;
     const us=last.querySelector('.item-unit-sel');
     const fi=[...us.options].findIndex(o=>o.value.toLowerCase()===it.u.toLowerCase());
@@ -958,6 +959,7 @@ function addItem(){
   function pickSug(idx){
     const item=results[idx]; if(!item) return;
     inp.value=cap(item.n);
+    inp.dataset.valid='true'; // mark as valid - picked from list
     inp.dataset.cod=item.c||'';
     const fi=[...unitSel.options].findIndex(o=>o.value.toLowerCase()===item.u.toLowerCase());
     if(fi>=0) unitSel.selectedIndex=fi;
@@ -978,13 +980,14 @@ function addItem(){
     sugBox.style.display='none'; qtyInp.focus();
   }
   inp.addEventListener('input',()=>{
+    inp.dataset.valid='false'; // invalidate on manual typing
+    inp.style.borderColor='';
     const orig = document.getElementById('f-origem').value;
     if(!orig){
       sugBox.innerHTML='<div class="sug-item" style="color:var(--tx2);font-size:12px;pointer-events:none">⚠️ Selecione o Estoque Origem primeiro</div>';
       sugBox.style.display='block';
       return;
     }
-    // Check if estoque has data
     const est = estoqueData[orig]||{};
     if(Object.keys(est).length===0){
       sugBox.innerHTML='<div class="sug-item" style="color:var(--tx2);font-size:12px;pointer-events:none">📭 Estoque sem produtos cadastrados</div>';
@@ -1003,23 +1006,34 @@ function selUrg(v){
   ['b','m','a'].forEach(u=>document.getElementById('u-'+u).className='urg'+(u===v?' s'+u:''));
 }
 
-function getItems(){
-  return [...document.querySelectorAll('.item-card')].map(card=>{
-    const inp=card.querySelector('.item-name-inp');
-    const nome=inp.value.trim();
-    // Try to find code from DB if not stored in dataset
+function getItems(validate=false){
+  const cards = [...document.querySelectorAll('.item-card')];
+  const items = [];
+  for(const card of cards){
+    const inp  = card.querySelector('.item-name-inp');
+    const nome = inp.value.trim();
+    if(!nome) continue;
+    // Validate: only accept products picked from list
+    if(validate && inp.dataset.valid !== 'true'){
+      inp.style.borderColor='#e24b4a';
+      inp.style.outline='none';
+      inp.focus();
+      toast('⚠️ Selecione o produto da lista — não digite manualmente');
+      return null; // signal error
+    }
     let cod=inp.dataset.cod||'';
-    if(!cod && nome){
+    if(!cod){
       const found=DB.find(i=>i.n.toUpperCase()===nome.toUpperCase());
       if(found) cod=String(found.c);
     }
-    return {
-      c:cod,
-      n:nome,
+    inp.style.borderColor='';
+    items.push({
+      c:cod, n:nome,
       q:card.querySelector('.item-qty-inp').value||'—',
       u:card.querySelector('.item-unit-sel').value
-    };
-  }).filter(it=>it.n);
+    });
+  }
+  return items;
 }
 
 function buildMsg(req){
@@ -1060,7 +1074,8 @@ function validarSaldos(items){
 }
 
 function sendWA(){
-  const items=getItems();
+  const items=getItems(true);
+  if(items===null) return; // validation failed
   if(!items.length){alert('Adicione pelo menos um insumo.');return;}
   if(!validarSaldos(items)) return;
   const req=mkReq(items,'sent');
@@ -1076,7 +1091,8 @@ function sendWA(){
 }
 
 function saveDraft(){
-  const items=getItems();
+  const items=getItems(true);
+  if(items===null) return;
   if(!items.length){alert('Adicione pelo menos um insumo.');return;}
   if(!validarSaldos(items)) return;
   const req=mkReq(items,'pending');

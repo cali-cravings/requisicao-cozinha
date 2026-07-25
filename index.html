@@ -616,23 +616,30 @@ function fmtTs(ts){
 function searchDB(q, origem){
   if(!q||q.length<2) return [];
   const t=norm(q);
-  // Always filter by estoque when origem is selected
   if(origem){
     const data = estoqueData[origem]||{};
     const keys = Object.keys(data);
-    if(keys.length>0){
-      // Estoque loaded - show only products from this estoque that are active
-      return Object.values(data)
-        .filter(item => item && item.n && item.ativo !== false && norm(item.n).includes(t))
-        .map(item => ({c: item.c||0, n: item.n, u: item.u||'UN'}))
-        .slice(0,8);
-    } else {
-      // Estoque selected but empty or not loaded yet
-      return [];
-    }
+
+    // Products from estoque (active only)
+    const estoqueItems = keys.length>0
+      ? Object.values(data)
+          .filter(item => item && item.n && item.ativo !== false && norm(item.n).includes(t))
+          .map(item => ({c: item.c||0, n: item.n, u: item.u||'UN'}))
+      : [];
+
+    // Always add limpeza products from global DB that match
+    const limpezaItems = DB.filter(i =>
+      LIMPEZA_LIVRE.has(i.n.toUpperCase()) && norm(i.n).includes(t)
+    );
+
+    // Merge: estoque items first, then limpeza not already in estoque
+    const estoqueNames = new Set(estoqueItems.map(i=>i.n.toUpperCase()));
+    const limpezaExtra = limpezaItems.filter(i=>!estoqueNames.has(i.n.toUpperCase()));
+
+    return [...estoqueItems, ...limpezaExtra].slice(0,10);
   }
-  // No estoque selected - show nothing (force user to select estoque first)
-  return [];
+  // No estoque selected - only show limpeza products
+  return DB.filter(i=>LIMPEZA_LIVRE.has(i.n.toUpperCase())&&norm(i.n).includes(t)).slice(0,8);
 }
 
 let urgency='m', itemCount=0, currentDetail=null, editingId=null;
@@ -1955,17 +1962,30 @@ function movimentarEstoque(req){
     const qty = parseFloat(it.q)||0;
     if(qty<=0) return;
     const key = it.c ? String(it.c) : it.n.toUpperCase().replace(/[^A-Z0-9]/g,'_').slice(0,20);
+
     // Debit from origem
     const itemOrig = getSaldo(origem, it.n, it.c);
     if(itemOrig){
       const novoSaldo = Math.max(0, (itemOrig.saldo||0) - qty);
       EST_REF.child(origem).child(key).update({saldo: novoSaldo});
     }
-    // Credit to destino
+
+    // Credit to destino — create product if it doesn't exist yet
     const itemDest = getSaldo(destino, it.n, it.c);
     if(itemDest){
+      // Product exists in destino — just add qty
       const novoSaldoDest = (itemDest.saldo||0) + qty;
       EST_REF.child(destino).child(key).update({saldo: novoSaldoDest});
+    } else {
+      // Product doesn't exist in destino — create it with received qty
+      const baseItem = itemOrig || {c: it.c||0, n: it.n, u: it.u||'UN'};
+      EST_REF.child(destino).child(key).set({
+        c: baseItem.c||0,
+        n: (it.n||'').toUpperCase(),
+        u: baseItem.u||it.u||'UN',
+        saldo: qty,
+        ativo: true
+      });
     }
   });
 }

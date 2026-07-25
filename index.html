@@ -77,6 +77,8 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .sug-saldo.baixo{color:#e8560a}
 .clb{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--tx2);margin-bottom:10px}
 /* TOGGLE ATIVO/INATIVO */
+.btn-filtro-ativ{background:none;border:.5px solid var(--bdr2);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--tx2);cursor:pointer;font-family:inherit;white-space:nowrap}
+.btn-filtro-ativ.ativo{background:#2C3E35;border-color:#2C3E35;color:#fff;font-weight:500}
 .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:.5px solid var(--bdr)}
 .toggle-row:last-child{border-bottom:none}
 .toggle-nm{font-size:13px;color:var(--tx);flex:1;padding-right:10px}
@@ -526,7 +528,12 @@ if('serviceWorker' in navigator){
         <option>BAR</option>
         <option>CALI CAFÉ</option>
       </select>
-      <input id="ativ-busca" type="text" class="finp" placeholder="Buscar produto..." oninput="renderAtivos()" style="margin-bottom:10px" autocomplete="off">
+      <input id="ativ-busca" type="text" class="finp" placeholder="Buscar produto..." oninput="renderAtivos()" style="margin-bottom:8px" autocomplete="off">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button id="ativ-btn-todos" onclick="setAtivFiltro('todos')" class="btn-filtro-ativ ativo">Todos</button>
+        <button id="ativ-btn-ativos" onclick="setAtivFiltro('ativos')" class="btn-filtro-ativ">Ativos</button>
+        <button id="ativ-btn-inativos" onclick="setAtivFiltro('inativos')" class="btn-filtro-ativ">Desativados</button>
+      </div>
       <div id="ativ-list"></div>
     </div>
 
@@ -1172,6 +1179,16 @@ function exportConsolidado(){
 // ---- ATIVAR / DESATIVAR PRODUTOS POR ESTOQUE ----
 // Structure: estoqueData[estoque][key].ativo = true/false
 
+let _ativFiltro = 'todos';
+function setAtivFiltro(f){
+  _ativFiltro = f;
+  ['todos','ativos','inativos'].forEach(id=>{
+    const btn = document.getElementById('ativ-btn-'+id);
+    if(btn) btn.className='btn-filtro-ativ'+(id===f?' ativo':'');
+  });
+  renderAtivos();
+}
+
 function renderAtivos(){
   const sel   = document.getElementById('ativ-sel').value;
   const busca = (document.getElementById('ativ-busca').value||'').toUpperCase().trim();
@@ -1182,9 +1199,17 @@ function renderAtivos(){
   let items = Object.entries(data)
     .map(([key,v])=>({key,...v}))
     .sort((a,b)=>a.n.localeCompare(b.n));
+
+  // Apply filtro
+  if(_ativFiltro==='ativos')   items = items.filter(i=>i.ativo!==false);
+  if(_ativFiltro==='inativos') items = items.filter(i=>i.ativo===false);
   if(busca) items = items.filter(i=>i.n.includes(busca));
+
   if(!items.length){
-    list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto neste estoque.<br>Importe primeiro pelo Gabarito.</div>';
+    const msg = _ativFiltro==='inativos'
+      ? 'Nenhum produto desativado neste estoque.'
+      : 'Nenhum produto neste estoque.<br>Importe primeiro pelo Gabarito.';
+    list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">'+msg+'</div>';
     return;
   }
 

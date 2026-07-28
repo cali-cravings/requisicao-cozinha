@@ -1195,7 +1195,7 @@ function exportConsolidado(){
   const consRows = [
     ['COD','INSUMO','ORIGEM','DESTINO','TOTAL','UNIDADE','ENTREGUE POR'],
   ];
-  Object.values(totals).sort((a,b)=>a.n.localeCompare(b.n)).forEach(item=>{
+  Object.values(totals).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n)).forEach(item=>{
     consRows.push([
       item.c ? Number(item.c) : '',
       (item.n||'').replace(/[^\w\s\-\.]/g,''),
@@ -1316,7 +1316,7 @@ function relPosicao(){
     estoques.forEach(nome=>{
       const data = estoqueData[nome];
       if(!data||!Object.keys(data).length) return;
-      const items = Object.values(data).sort((a,b)=>a.n.localeCompare(b.n));
+      const items = Object.values(data).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n));
       const rows = [
         ['POSIÇÃO DE ESTOQUE — '+nome,'','','','',''],
         ['Período',fmtPeriod(dtIni,dtFim),'','','',''],
@@ -1367,7 +1367,7 @@ function relMovimentacao(){
         ['CÓD.','PRODUTO','QTD','UNIDADE','VALOR TOTAL'],
       ];
       let total = 0;
-      Object.values(route.items).sort((a,b)=>a.n.localeCompare(b.n)).forEach(it=>{
+      Object.values(route.items).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n)).forEach(it=>{
         rows.push([it.c||'', it.n, it.qty, it.u, it.valor]);
         total += it.valor;
       });
@@ -1405,7 +1405,7 @@ function relRanking(){
         produtos[key].valor += qty*(prod?prod.custo||0:0);
       });
     });
-    const sorted = Object.values(produtos).sort((a,b)=>b.vezes-a.vezes);
+    const sorted = Object.values(produtos).filter(i=>i&&i.n).sort((a,b)=>b.vezes-a.vezes);
     const wb = XLSX.utils.book_new();
     const rows = [
       ['RANKING DE PRODUTOS MAIS SOLICITADOS','','','','',''],
@@ -1441,7 +1441,7 @@ function relGiro(){
           saidas[key].saida += parseFloat(it.q)||0;
         });
       });
-      const items = Object.values(data).sort((a,b)=>a.n.localeCompare(b.n));
+      const items = Object.values(data).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n));
       const rows = [
         ['GIRO DE ESTOQUE — '+nome,'','','','','',''],
         ['Período',fmtPeriod(dtIni,dtFim),'','','','',''],
@@ -1580,7 +1580,7 @@ function exportMes(mes, ano){
     ['Total de requisições:', mesReqs.length],[''],
     ['CÓD.','PRODUTO','TOTAL TRANSFERIDO','UNIDADE','Nº DE VEZES'],
   ];
-  Object.values(resumoTotals).sort((a,b)=>a.n.localeCompare(b.n))
+  Object.values(resumoTotals).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n))
     .forEach(p => resumoData.push([p.c||'', p.n, p.qty, p.u, p.vezes]));
 
   const wsR = XLSX.utils.aoa_to_sheet(resumoData);
@@ -1758,7 +1758,7 @@ function renderConsulta(){
   const list = document.getElementById('cons-list');
   if(!sel){list.innerHTML='';return;}
   const data = estoqueData[sel] || {};
-  let items = Object.values(data).sort((a,b)=>a.n.localeCompare(b.n));
+  let items = Object.values(data).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n));
   if(busca) items = items.filter(i=>i.n.includes(busca));
   if(!items.length){
     list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto encontrado.</div>';
@@ -1780,7 +1780,7 @@ function renderEstoque(){
   const list = document.getElementById('est-list');
   if(!sel){list.innerHTML='';return;}
   const data = estoqueData[sel] || {};
-  const items = Object.values(data).sort((a,b)=>a.n.localeCompare(b.n));
+  const items = Object.values(data).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n));
   if(!items.length){
     list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto cadastrado neste estoque.</div>';
     return;

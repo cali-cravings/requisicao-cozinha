@@ -1659,7 +1659,7 @@ function confirmDelete(){
     window._estoqueMode = false;
     const senha = document.getElementById('modal-delete-input').value.trim();
     closeDeleteModal();
-    if(senha !== '000813'){toast('Acesso negado ❌');return;}
+    if(senha !== '000813' && senha !== '2202'){toast('Acesso negado ❌');return;}
     goTo('s-estoque');
     return;
   }

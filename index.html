@@ -267,12 +267,7 @@ if('serviceWorker' in navigator){
     <button class="btn-excel-home" onclick="abrirModalMes()"  style="margin-top:-4px"><i class="ti ti-calendar-stats"></i> Exportar consolidado do mês</button>
     <div>
       <div class="sec-l">Requisições recentes</div>
-      <div id="alerta-estoque" style="display:none" class="cnt-alert">
-      <div class="cnt-alert-num" id="cnt-alert-num">0</div>
-      <div class="cnt-alert-lb">⚠️ Produtos com saldo zero ou baixo</div>
-      <div id="alerta-lista" style="font-size:12px;color:#854f0b;margin-top:6px"></div>
-    </div>
-    <div id="req-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="req-list" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
   </div>
 </div>
@@ -714,35 +709,31 @@ function renderHome(){
   // Enviadas hoje = delivered hoje (entregues)
   document.getElementById('cnt-s').textContent=allReqs.filter(r=>r.status==='delivered'&&new Date(r.ts).toDateString()===today).length;
 
-  // Alert: products with zero stock
-  const alertaEl = document.getElementById('alerta-estoque');
-  const alertaNum = document.getElementById('cnt-alert-num');
-  const alertaLista = document.getElementById('alerta-lista');
-  if(alertaEl){
-    const zerados = [];
-    Object.entries(estoqueData).forEach(([est, data])=>{
-      if(!data) return;
-      Object.values(data).filter(i=>i&&i.n).forEach(item=>{
-        if(item.saldo<=0) zerados.push({n:item.n, est});
-      });
+  // Alert stored for use in renderHome list
+  window._zerados = [];
+  Object.entries(estoqueData).forEach(([est, data])=>{
+    if(!data) return;
+    Object.values(data).filter(i=>i&&i.n).forEach(item=>{
+      if(item.saldo<=0) window._zerados.push({n:item.n, est});
     });
-    if(zerados.length>0){
-      alertaEl.style.display='block';
-      alertaNum.textContent=zerados.length;
-      alertaLista.innerHTML=zerados.slice(0,5).map(i=>
-        '<span style="display:block">🔴 '+i.n+' — '+i.est+'</span>'
-      ).join('')+(zerados.length>5?'<span style="display:block;margin-top:2px">...e mais '+(zerados.length-5)+' produto(s)</span>':'');
-    } else {
-      alertaEl.style.display='none';
-    }
-  }
+  });
   const list=document.getElementById('req-list');
+  // Build alert item if there are zerados
+  const zerados = window._zerados||[];
+  let alertItem = '';
+  if(zerados.length>0){
+    const lista = zerados.slice(0,3).map(i=>'🔴 '+i.n+' ('+i.est+')').join('<br>');
+    const mais = zerados.length>3?' <span style="color:#854f0b">...e mais '+(zerados.length-3)+'</span>':'';
+    alertItem = '<div style="background:#fdf0ea;border:.5px solid #e8560a;border-radius:var(--r);padding:12px 14px;font-size:12px;color:#854f0b;line-height:1.6">'+
+      '<b style="font-size:13px">⚠️ '+zerados.length+' produto(s) com saldo zero</b><br>'+lista+mais+'</div>';
+  }
+
   if(!allReqs.length){
-    list.innerHTML='<div class="empty"><i class="ti ti-clipboard-list"></i>Nenhuma requisição ainda.<br>Crie a primeira!</div>';
+    list.innerHTML=alertItem+'<div class="empty"><i class="ti ti-clipboard-list"></i>Nenhuma requisição ainda.<br>Crie a primeira!</div>';
     return;
   }
   const stMap={pending:{cls:'bp',lb:'Pendente'},sent:{cls:'bs',lb:'Enviada'},delivered:{cls:'bd',lb:'Entregue'}};
-  list.innerHTML=allReqs.map(r=>{
+  list.innerHTML=alertItem+allReqs.map(r=>{
     const st=stMap[r.status]||stMap.sent;
     const temFalta=r.items&&r.items.some(it=>it.falta===true);
     const alertaHtml=temFalta?'<span class="alerta-badge">⚠️ Item em falta</span>':'';

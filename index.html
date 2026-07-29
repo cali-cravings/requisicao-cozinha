@@ -1046,19 +1046,29 @@ function confirmarEntregaParcial(){
     if(!st || !st.entregar){
       return {...it, falta:true, qOriginal:it.q, q:'0'};
     }
-    return {...it, falta:false, q:String(st.qEntrega), qOriginal: st.qEntrega < st.qPedido ? it.q : undefined};
+    const item = {...it, falta:false, q:String(st.qEntrega)};
+    if(st.qEntrega < st.qPedido) item.qOriginal = it.q;
+    else delete item.qOriginal;
+    return item;
+  });
+
+  // Clean undefined values before sending to Firebase
+  const cleanItems = updatedItems.map(it=>{
+    const clean={};
+    Object.entries(it).forEach(([k,v])=>{ if(v!==undefined) clean[k]=v; });
+    return clean;
   });
 
   REQ_REF.child(currentDetail.fbKey).update({
     status:'delivered',
     senhaEntrega:'Senha '+senhaIdx,
     tsEntrega:Date.now(),
-    items: updatedItems
+    items: cleanItems
   });
 
   currentDetail.items = updatedItems;
   currentDetail.status = 'delivered';
-  movimentarEstoque({...currentDetail, items: updatedItems});
+  movimentarEstoque({...currentDetail, items: cleanItems});
 
   const bd=document.getElementById('btn-delivered');
   if(bd){bd.className='btn-delivered done';bd.innerHTML='<i class="ti ti-check"></i> Entregue';}

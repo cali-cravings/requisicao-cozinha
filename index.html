@@ -1027,8 +1027,22 @@ function fecharEntregaModal(){
 }
 
 function confirmarEntregaParcial(){
+  if(!currentDetail){toast('Erro: requisição não encontrada');return;}
+
+  const state = window._entregaState||{};
+  const algumMarcado = Object.values(state).some(st=>st.entregar);
+  if(!algumMarcado){
+    toast('⚠️ Marque pelo menos um item para entregar');
+    return;
+  }
+
   const senhas=['127127','128128','129129','130130'];
   const senha = document.getElementById('entrega-senha-input').value.trim();
+  if(!senha){
+    document.getElementById('entrega-senha-input').focus();
+    toast('Digite a senha de autorização');
+    return;
+  }
   if(!senhas.includes(senha)){
     document.getElementById('entrega-senha-input').value='';
     document.getElementById('entrega-senha-input').focus();
@@ -1037,7 +1051,6 @@ function confirmarEntregaParcial(){
   }
   const senhaIdx = senhas.indexOf(senha)+1;
   const items = currentDetail.items||[];
-  const state = window._entregaState||{};
 
   const updatedItems = items.map((it, idx)=>{
     const st = state[idx];

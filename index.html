@@ -449,6 +449,21 @@ if('serviceWorker' in navigator){
   </div>
 </div>
 
+
+<!-- MODAL EDITAR SALDO -->
+<div class="modal-edit-overlay" id="modal-edit-saldo">
+  <div class="modal-edit-box">
+    <h2 id="edit-saldo-title">Editar saldo</h2>
+    <p id="edit-saldo-desc"></p>
+    <label class="modal-field-label">Novo saldo</label>
+    <input class="modal-input" id="edit-saldo-input" type="number" min="0" step="0.5" placeholder="0">
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="fecharEditSaldo()">Cancelar</button>
+      <button class="modal-confirm" style="background:#2C3E35" onclick="confirmarEditSaldo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-delete">
   <div class="modal-box">
     <h2 id="modal-delete-title">Excluir requisicao</h2>

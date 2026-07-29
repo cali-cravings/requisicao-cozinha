@@ -429,18 +429,6 @@ if('serviceWorker' in navigator){
 </div>
 
 <!-- MODAL SENHA ENTREGA -->
-<div class="modal-overlay" id="modal-senha">
-  <div class="modal-box">
-    <h2>Confirmar entrega</h2>
-    <p>Digite a senha de autorizacao para confirmar a entrega desta requisicao.</p>
-    <label class="modal-field-label">Senha</label>
-    <input class="modal-input" id="modal-senha-input" type="password" placeholder="••••••" maxlength="10">
-    <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="modal-confirm" onclick="confirmModal()">Confirmar</button>
-    </div>
-  </div>
-</div>
 
 
 <!-- MODAL SENHA EXCLUSAO -->
@@ -1027,6 +1015,7 @@ function fecharEntregaModal(){
 }
 
 function confirmarEntregaParcial(){
+  try{
   if(!currentDetail){toast('Erro: requisição não encontrada');return;}
 
   const state = window._entregaState||{};
@@ -1079,6 +1068,7 @@ function confirmarEntregaParcial(){
   fecharEntregaModal();
   toast('Entrega confirmada 📦');
   openDetail(currentDetail.fbKey);
+  }catch(e){alert('Erro ao confirmar entrega: '+e.message);console.error(e);}
 }
 
 function fecharEditSaldo(){

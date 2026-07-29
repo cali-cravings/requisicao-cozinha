@@ -1308,14 +1308,14 @@ function addItem(){
   inp.type='text'; inp.className='item-name-inp';
   inp.placeholder='Buscar insumo no estoque...';
   inp.autocomplete='off'; inp.autocorrect='off'; inp.spellcheck=false;
-  const saldoTag=document.createElement('span');
+  const saldoTag=document.createElement('div');
   saldoTag.className='item-saldo-tag';
-  saldoTag.style.cssText='display:none;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#e1f5ee;color:#0f6e56;white-space:nowrap;align-self:center';
+  saldoTag.style.cssText='display:none;font-size:12px;font-weight:600;padding:4px 10px;background:#e1f5ee;color:#0f6e56;border-radius:0 0 8px 8px;border-top:.5px solid var(--bdr)';
   const delBtn=document.createElement('button');
   delBtn.type='button'; delBtn.className='item-del';
   delBtn.innerHTML='<i class="ti ti-trash"></i>';
   delBtn.onclick=()=>card.remove();
-  nameRow.appendChild(inp); nameRow.appendChild(saldoTag); nameRow.appendChild(delBtn);
+  nameRow.appendChild(inp); nameRow.appendChild(delBtn);
   const sugBox=document.createElement('div'); sugBox.className='sug-box';
   const qtyRow=document.createElement('div'); qtyRow.className='item-qty-row';
   const qtyInp=document.createElement('input');
@@ -1326,7 +1326,7 @@ function addItem(){
     const o=document.createElement('option'); o.value=u; o.textContent=u; unitSel.appendChild(o);
   });
   qtyRow.appendChild(qtyInp); qtyRow.appendChild(unitSel);
-  card.appendChild(nameRow); card.appendChild(sugBox); card.appendChild(qtyRow);
+  card.appendChild(nameRow); card.appendChild(sugBox); card.appendChild(saldoTag); card.appendChild(qtyRow);
   document.getElementById('items-list').appendChild(card);
   let results=[];
   function renderSug(items){
@@ -1370,15 +1370,18 @@ function addItem(){
         qtyInp.title='Saldo disponível: '+s.saldo+' '+s.u;
       }
     }
-    // Update saldo tag in card
+    // Update saldo tag
     const orig2=document.getElementById('f-origem').value;
     if(orig2){
       const s2=getSaldo(orig2,item.n,item.c);
       if(s2!==null){
-        saldoTag.style.display='inline-flex';
-        saldoTag.textContent='Estoque: '+s2.saldo+' '+s2.u;
+        const sIcon=s2.saldo<=0?'🔴':s2.saldo<=5?'🟠':'🟢';
+        saldoTag.style.display='block';
+        saldoTag.textContent=sIcon+' Saldo em '+orig2+': '+s2.saldo+' '+s2.u;
         saldoTag.style.background=s2.saldo<=0?'#faeeda':s2.saldo<=5?'#fff3e0':'#e1f5ee';
         saldoTag.style.color=s2.saldo<=0?'#854f0b':s2.saldo<=5?'#e8560a':'#0f6e56';
+      } else {
+        saldoTag.style.display='none';
       }
     }
     sugBox.style.display='none'; qtyInp.focus();

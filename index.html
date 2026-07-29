@@ -485,7 +485,7 @@ if('serviceWorker' in navigator){
         <option>BAR</option>
         <option>CALI CAFÉ</option>
       </select>
-      <input id="est-man-cod" type="number" class="finp" placeholder="Código (opcional)" style="margin-bottom:8px">
+      <input id="est-man-cod" type="number" class="finp" placeholder="Código (opcional)" style="margin-bottom:8px" oninput="buscarPorCodigo()">
       <input id="est-man-nome" type="text" class="finp" placeholder="Nome do produto *" style="margin-bottom:8px" oninput="buscarProdutoManual()">
       <div id="est-man-sug" style="display:none;background:var(--surf);border:.5px solid var(--bdr2);border-radius:8px;margin-bottom:8px;max-height:150px;overflow-y:auto"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
@@ -1709,6 +1709,35 @@ function confirmDelete(){
   closeDeleteModal();
   deleteFromFB(currentDetail.fbKey);
   toast('Excluída ✓'); goTo('s-home');
+}
+
+function buscarPorCodigo(){
+  const cod = parseInt(document.getElementById('est-man-cod').value);
+  if(!cod) return;
+  // Search in DB
+  const found = DB.find(i=>i.c===cod);
+  if(found){
+    document.getElementById('est-man-nome').value = found.n;
+    const unSel = document.getElementById('est-man-un');
+    const fi = [...unSel.options].findIndex(o=>o.value.toLowerCase()===found.u.toLowerCase());
+    if(fi>=0) unSel.selectedIndex=fi;
+    document.getElementById('est-man-saldo').focus();
+    toast('Produto encontrado: '+found.n);
+  }
+  // Also search in estoqueData
+  const est = document.getElementById('est-sel-manual').value;
+  if(est && estoqueData[est]){
+    const data = estoqueData[est];
+    const key = String(cod);
+    if(data[key]){
+      document.getElementById('est-man-nome').value = data[key].n;
+      const unSel = document.getElementById('est-man-un');
+      const fi = [...unSel.options].findIndex(o=>o.value.toLowerCase()===data[key].u.toLowerCase());
+      if(fi>=0) unSel.selectedIndex=fi;
+      document.getElementById('est-man-saldo').value = data[key].saldo||'';
+      document.getElementById('est-man-saldo').focus();
+    }
+  }
 }
 
 function buscarProdutoManual(){

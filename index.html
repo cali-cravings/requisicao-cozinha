@@ -444,6 +444,23 @@ if('serviceWorker' in navigator){
 
 
 <!-- MODAL SENHA EXCLUSAO -->
+
+<!-- MODAL CONFIRMAÇÃO DE ENTREGA -->
+<div class="modal-entrega-overlay" id="modal-entrega">
+  <div class="modal-entrega-box">
+    <h2>Confirmar entrega</h2>
+    <p id="entrega-desc">Marque os itens que serão entregues.</p>
+    <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">✅ Marque para entregar · Desmarque para falta</div>
+    <div id="entrega-items-list"></div>
+    <label class="modal-field-label" style="margin-top:14px">Senha de autorização</label>
+    <input class="modal-input" id="entrega-senha-input" type="password" placeholder="••••••" maxlength="10">
+    <div class="modal-entrega-btns">
+      <button class="modal-cancel" onclick="fecharEntregaModal()">Cancelar</button>
+      <button class="modal-confirm" style="background:#2C3E35" onclick="confirmarEntregaParcial()">Confirmar entrega</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-delete">
   <div class="modal-box">
     <h2 id="modal-delete-title">Excluir requisicao</h2>

@@ -1386,9 +1386,37 @@ function addItem(){
     }
     sugBox.style.display='none'; qtyInp.focus();
   }
-  inp.addEventListener('input',()=>renderSug(searchDB(inp.value.trim())));
-  inp.addEventListener('focus',()=>{if(inp.value.trim().length>=2) renderSug(searchDB(inp.value.trim()));});
-  inp.addEventListener('blur',()=>setTimeout(()=>{sugBox.style.display='none';},200));
+  inp.addEventListener('input',()=>{
+    inp.dataset.valid='false';
+    if(saldoTag) saldoTag.style.display='none';
+    inp.style.borderColor=''; inp.style.boxShadow='';
+    const orig=document.getElementById('f-origem').value;
+    if(!orig){
+      sugBox.innerHTML='<div class="sug-item" style="color:var(--tx2);font-size:12px;pointer-events:none">⚠️ Selecione o Estoque Origem primeiro</div>';
+      sugBox.style.display='block'; return;
+    }
+    const est=estoqueData[orig]||{};
+    if(Object.keys(est).length===0){
+      sugBox.innerHTML='<div class="sug-item" style="color:var(--tx2);font-size:12px;pointer-events:none">📭 Estoque sem produtos cadastrados</div>';
+      sugBox.style.display='block'; return;
+    }
+    renderSug(searchDB(inp.value.trim(), orig));
+  });
+  inp.addEventListener('focus',()=>{
+    if(inp.value.trim().length>=2){
+      const orig=document.getElementById('f-origem').value;
+      renderSug(searchDB(inp.value.trim(), orig));
+    }
+  });
+  inp.addEventListener('blur',()=>{
+    setTimeout(()=>{
+      sugBox.style.display='none';
+      if(inp.value.trim() && inp.dataset.valid!=='true' && !LIMPEZA_LIVRE.has(inp.value.trim().toUpperCase())){
+        inp.style.borderColor='#e24b4a';
+        inp.style.boxShadow='0 0 0 3px rgba(226,75,74,.12)';
+      }
+    },200);
+  });
   inp.focus();
 }
 

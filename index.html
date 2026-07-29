@@ -944,12 +944,17 @@ function markDelivered(){
     const qty = parseFloat(it.q)||0;
     const saldo = s ? (s.saldo||0) : null;
     const semSaldo = saldo !== null && saldo <= 0;
-    const qEntrega = semSaldo ? 0 : (saldo !== null && saldo < qty ? saldo : qty);
+    const acimaSaldo = saldo !== null && !semSaldo && qty > saldo;
+    const bloqueado = semSaldo || acimaSaldo;
+    const qEntrega = bloqueado ? 0 : qty;
     const un = (s ? s.u : it.u)||it.u||'UN';
     window._entregaState[idx] = {
-      entregar: false,  // ALL start unchecked - estoquista decides
+      entregar: false,
       semSaldo: semSaldo,
+      acimaSaldo: acimaSaldo||false,
+      bloqueado: bloqueado,
       qEntrega: qEntrega,
+      saldoDisp: saldo,
       un: un,
       qPedido: qty
     };
@@ -973,7 +978,7 @@ function renderEntregaModal(items, origem){
       (st.entregar ? 'Entregar: '+st.qEntrega+' '+st.un : 'Pedido: '+st.qPedido+' '+st.un+' · marque para entregar');
     const cursor = st.semSaldo ? 'not-allowed' : 'pointer';
     const onclick = st.semSaldo ? '' : 'onclick="toggleItem('+idx+')"';
-    return '<div class="entrega-item" style="gap:12px;opacity:'+(st.semSaldo?'.5':'1')+'">'+
+    return '<div class="entrega-item" style="gap:12px;opacity:'+(st.bloqueado?'.5':'1')+'">'+
       '<div '+onclick+' style="width:28px;height:28px;min-width:28px;border-radius:8px;background:'+bg+
       ';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;cursor:'+cursor+
       ';transition:background .2s;user-select:none" id="tog_'+idx+'">'+icon+'</div>'+
@@ -989,7 +994,7 @@ function renderEntregaModal(items, origem){
 
 function toggleItem(idx){
   const st = window._entregaState[idx];
-  if(!st || st.semSaldo) return;
+  if(!st || st.bloqueado) return;
   st.entregar = !st.entregar;
   const tog = document.getElementById('tog_'+idx);
   if(tog){

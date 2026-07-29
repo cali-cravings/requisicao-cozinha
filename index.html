@@ -734,11 +734,12 @@ function renderHome(){
   }
   const stMap={pending:{cls:'bp',lb:'Pendente'},sent:{cls:'bs',lb:'Enviada'},delivered:{cls:'bd',lb:'Entregue'}};
   list.innerHTML=alertItem+allReqs.map(r=>{
+    try{
     const st=stMap[r.status]||stMap.sent;
-    const temFalta=r.items&&r.items.some(it=>it.falta===true);
+    const temFalta=(r.items||[]).some(it=>it.falta===true);
     const alertaHtml=temFalta?'<span class="alerta-badge">⚠️ Item em falta</span>':'';
     // Check if any item has insufficient saldo
-    const temSaldoBaixo = r.items&&r.items.some(it=>{
+    const temSaldoBaixo = (r.items||[]).some(it=>{
       const orig = r.origem||'';
       const s = getSaldo(orig, it.n, it.c);
       return s!==null && (s.saldo<=0 || (parseFloat(it.q)>s.saldo && parseFloat(it.q)>0));
@@ -747,7 +748,9 @@ function renderHome(){
     const ub=r.urgency==='a'?'<span class="badge ba">🔴 Alta</span>':'<span class="badge '+st.cls+'">'+st.lb+'</span>';
     const ico=r.status==='pending'?'⏳':r.status==='delivered'?'📦':'✅';
     const cls=r.status==='pending'?'p':'s';
-    return '<div class="ri" data-key="'+r.fbKey+'"><div class="rico '+cls+'">'+ico+'</div><div class="rm"><div class="rt">'+r.setor+'</div><div class="rs">'+r.nome+' · '+fmtTs(r.ts)+' · '+r.items.length+' item'+(r.items.length>1?'s':'')+'</div></div>'+ub+alertaHtml+saldoAlertaHtml+'</div>';
+    const itemCount = (r.items||[]).length;
+    return '<div class="ri" data-key="'+r.fbKey+'"><div class="rico '+cls+'">'+ico+'</div><div class="rm"><div class="rt">'+r.setor+'</div><div class="rs">'+r.nome+' · '+fmtTs(r.ts)+' · '+itemCount+' item'+(itemCount>1?'s':'')+'</div></div>'+ub+alertaHtml+saldoAlertaHtml+'</div>';
+    }catch(e){console.error('Erro renderizando req:',r.fbKey,e);return '';}
   }).join('');
   list.querySelectorAll('.ri').forEach(el=>{
     el.addEventListener('click',()=>openDetail(el.dataset.key));

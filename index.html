@@ -69,6 +69,18 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .saldo-val.zero{color:#e24b4a}
 .saldo-val.baixo{color:#e8560a}
 .saldo-cod{font-size:10px;color:var(--tx3);margin-right:8px}
+.modal-entrega-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-entrega-overlay.show{display:flex}
+.modal-entrega-box{background:var(--surf);border-radius:16px;padding:22px 20px;width:100%;max-width:400px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-entrega-box h2{font-size:17px;font-weight:700;color:var(--tx);margin-bottom:4px}
+.modal-entrega-box p{font-size:13px;color:var(--tx2);margin-bottom:14px}
+.entrega-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:.5px solid var(--bdr);font-size:13px}
+.entrega-item:last-child{border-bottom:none}
+.entrega-item-nm{flex:1;padding-right:8px}
+.entrega-item-status{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.ei-ok{background:#e1f5ee;color:#0f6e56}
+.ei-falta{background:#faeeda;color:#854f0b}
+.modal-entrega-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
 .modal-edit-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px}
 .modal-edit-overlay.show{display:flex}
 .modal-edit-box{background:var(--surf);border-radius:16px;padding:24px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.18)}
@@ -876,9 +888,110 @@ function editReq(){
 // ---- DELIVERED ----
 function markDelivered(){
   if(!currentDetail||currentDetail.status==='delivered') return;
-  document.getElementById('modal-senha-input').value='';
-  document.getElementById('modal-senha').classList.add('show');
-  setTimeout(()=>document.getElementById('modal-senha-input').focus(),100);
+  // Build item list with saldo check
+  const origem = currentDetail.origem||'';
+  const items = currentDetail.items||[];
+  const itemsComSaldo = [];
+  const itemsSemSaldo = [];
+
+  items.forEach(it=>{
+    const s = getSaldo(origem, it.n, it.c);
+    const qty = parseFloat(it.q)||0;
+    if(s!==null && s.saldo<=0){
+      itemsSemSaldo.push(it);
+    } else if(s!==null && qty>s.saldo){
+      // Partial - can deliver what's available
+      itemsComSaldo.push({...it, qEntregue: s.saldo, u: s.u});
+      if(s.saldo < qty) itemsSemSaldo.push({...it, qFalta: qty - s.saldo});
+    } else {
+      itemsComSaldo.push({...it, qEntregue: qty});
+    }
+  });
+
+  // Build confirmation list HTML with checkboxes
+  const listHtml = items.map((it, idx)=>{
+    const s = getSaldo(origem, it.n, it.c);
+    const qty = parseFloat(it.q)||0;
+    const temSaldo = s===null || s.saldo>0;
+    const saldoInfo = s ? ' (saldo: '+s.saldo+' '+s.u+')' : '';
+    const checked = temSaldo ? 'checked' : '';
+    const labelCls = temSaldo ? 'color:#0f6e56' : 'color:#854f0b';
+    return '<div class="entrega-item" style="gap:10px">'+
+      '<input type="checkbox" id="chk_item_'+idx+'" '+checked+' style="width:18px;height:18px;flex-shrink:0;cursor:pointer" '+
+      'onchange="atualizarDescEntrega()">'+
+      '<span class="entrega-item-nm" style="'+labelCls+'">'+it.n+'<br>'+
+        '<span style="font-size:11px;color:var(--tx3)">Pedido: '+qty+' '+it.u+saldoInfo+'</span>'+
+      '</span>'+
+    '</div>';
+  }).join('');
+
+  document.getElementById('entrega-items-list').innerHTML = listHtml;
+  atualizarDescEntrega();
+  document.getElementById('entrega-senha-input').value='';
+  document.getElementById('modal-entrega').classList.add('show');
+  setTimeout(()=>document.getElementById('entrega-senha-input').focus(),100);
+}
+
+function atualizarDescEntrega(){
+  const items = currentDetail.items||[];
+  let entregar = 0, falta = 0;
+  items.forEach((it, idx)=>{
+    const chk = document.getElementById('chk_item_'+idx);
+    if(chk && chk.checked) entregar++;
+    else falta++;
+  });
+  document.getElementById('entrega-desc').textContent =
+    entregar+' item(s) serão entregues · '+falta+' ficará(ão) como falta';
+}
+
+function fecharEntregaModal(){
+  document.getElementById('modal-entrega').classList.remove('show');
+}
+
+function confirmarEntregaParcial(){
+  const senhas=['127127','128128','129129','130130'];
+  const senha = document.getElementById('entrega-senha-input').value.trim();
+  if(!senhas.includes(senha)){
+    document.getElementById('entrega-senha-input').value='';
+    document.getElementById('entrega-senha-input').focus();
+    toast('Senha incorreta ❌');
+    return;
+  }
+  const senhaIdx = senhas.indexOf(senha)+1;
+  const origem = currentDetail.origem||'';
+  const items = currentDetail.items||[];
+
+  // Use checkbox state to determine falta - estoquista has final say
+  const updatedItems = items.map((it, idx)=>{
+    const chk = document.getElementById('chk_item_'+idx);
+    const vaientregar = chk ? chk.checked : true;
+    if(!vaientregar){
+      return {...it, falta:true, qOriginal:it.q, q:'0'};
+    }
+    return {...it, falta:false};
+  });
+
+  REQ_REF.child(currentDetail.fbKey).update({
+    status:'delivered',
+    senhaEntrega:'Senha '+senhaIdx,
+    tsEntrega:Date.now(),
+    items: updatedItems
+  });
+
+  // Update currentDetail and trigger stock movement
+  currentDetail.items = updatedItems;
+  currentDetail.status = 'delivered';
+  movimentarEstoque({...currentDetail, items: updatedItems});
+
+  const bd=document.getElementById('btn-delivered');
+  if(bd){bd.className='btn-delivered done';bd.innerHTML='<i class="ti ti-check"></i> Entregue';}
+  const be=document.getElementById('btn-edit');
+  if(be) be.style.display='none';
+
+  fecharEntregaModal();
+  toast('Entrega confirmada 📦');
+  // Refresh detail view
+  openDetail(currentDetail.fbKey);
 }
 function closeModal(){
   document.getElementById('modal-senha').classList.remove('show');

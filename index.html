@@ -59,6 +59,9 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .btn-delivered{background:none;border:.5px solid var(--gr);border-radius:var(--r);padding:13px;font-size:14px;color:var(--gr);cursor:pointer;width:100%;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent}
 .btn-delivered:active{background:var(--gr-l)}
 .btn-delivered.done{opacity:.4;pointer-events:none}
+.cnt-alert{background:#fdf0ea;border:.5px solid #e8560a;border-radius:var(--r);padding:14px 16px;margin-bottom:8px}
+.cnt-alert-num{font-size:28px;font-weight:700;color:#e8560a;line-height:1}
+.cnt-alert-lb{font-size:12px;color:#854f0b;margin-top:2px}
 .saldo-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:.5px solid var(--bdr);font-size:13px}
 .saldo-row:last-child{border-bottom:none}
 .saldo-nm{color:var(--tx);flex:1}
@@ -264,7 +267,12 @@ if('serviceWorker' in navigator){
     <button class="btn-excel-home" onclick="abrirModalMes()"  style="margin-top:-4px"><i class="ti ti-calendar-stats"></i> Exportar consolidado do mês</button>
     <div>
       <div class="sec-l">Requisições recentes</div>
-      <div id="req-list" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="alerta-estoque" style="display:none" class="cnt-alert">
+      <div class="cnt-alert-num" id="cnt-alert-num">0</div>
+      <div class="cnt-alert-lb">⚠️ Produtos com saldo zero ou baixo</div>
+      <div id="alerta-lista" style="font-size:12px;color:#854f0b;margin-top:6px"></div>
+    </div>
+    <div id="req-list" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
   </div>
 </div>
@@ -705,6 +713,29 @@ function renderHome(){
   document.getElementById('cnt-p').textContent=allReqs.filter(r=>r.status==='pending'||r.status==='sent').length;
   // Enviadas hoje = delivered hoje (entregues)
   document.getElementById('cnt-s').textContent=allReqs.filter(r=>r.status==='delivered'&&new Date(r.ts).toDateString()===today).length;
+
+  // Alert: products with zero stock
+  const alertaEl = document.getElementById('alerta-estoque');
+  const alertaNum = document.getElementById('cnt-alert-num');
+  const alertaLista = document.getElementById('alerta-lista');
+  if(alertaEl){
+    const zerados = [];
+    Object.entries(estoqueData).forEach(([est, data])=>{
+      if(!data) return;
+      Object.values(data).filter(i=>i&&i.n).forEach(item=>{
+        if(item.saldo<=0) zerados.push({n:item.n, est});
+      });
+    });
+    if(zerados.length>0){
+      alertaEl.style.display='block';
+      alertaNum.textContent=zerados.length;
+      alertaLista.innerHTML=zerados.slice(0,5).map(i=>
+        '<span style="display:block">🔴 '+i.n+' — '+i.est+'</span>'
+      ).join('')+(zerados.length>5?'<span style="display:block;margin-top:2px">...e mais '+(zerados.length-5)+' produto(s)</span>':'');
+    } else {
+      alertaEl.style.display='none';
+    }
+  }
   const list=document.getElementById('req-list');
   if(!allReqs.length){
     list.innerHTML='<div class="empty"><i class="ti ti-clipboard-list"></i>Nenhuma requisição ainda.<br>Crie a primeira!</div>';
@@ -715,10 +746,17 @@ function renderHome(){
     const st=stMap[r.status]||stMap.sent;
     const temFalta=r.items&&r.items.some(it=>it.falta===true);
     const alertaHtml=temFalta?'<span class="alerta-badge">⚠️ Item em falta</span>':'';
+    // Check if any item has insufficient saldo
+    const temSaldoBaixo = r.items&&r.items.some(it=>{
+      const orig = r.origem||'';
+      const s = getSaldo(orig, it.n, it.c);
+      return s!==null && (s.saldo<=0 || (parseFloat(it.q)>s.saldo && parseFloat(it.q)>0));
+    });
+    const saldoAlertaHtml = temSaldoBaixo?'<span class="alerta-badge" style="background:#fdf0ea;color:#854f0b">⚠️ Saldo insuf.</span>':'';
     const ub=r.urgency==='a'?'<span class="badge ba">🔴 Alta</span>':'<span class="badge '+st.cls+'">'+st.lb+'</span>';
     const ico=r.status==='pending'?'⏳':r.status==='delivered'?'📦':'✅';
     const cls=r.status==='pending'?'p':'s';
-    return '<div class="ri" data-key="'+r.fbKey+'"><div class="rico '+cls+'">'+ico+'</div><div class="rm"><div class="rt">'+r.setor+'</div><div class="rs">'+r.nome+' · '+fmtTs(r.ts)+' · '+r.items.length+' item'+(r.items.length>1?'s':'')+'</div></div>'+ub+alertaHtml+'</div>';
+    return '<div class="ri" data-key="'+r.fbKey+'"><div class="rico '+cls+'">'+ico+'</div><div class="rm"><div class="rt">'+r.setor+'</div><div class="rs">'+r.nome+' · '+fmtTs(r.ts)+' · '+r.items.length+' item'+(r.items.length>1?'s':'')+'</div></div>'+ub+alertaHtml+saldoAlertaHtml+'</div>';
   }).join('');
   list.querySelectorAll('.ri').forEach(el=>{
     el.addEventListener('click',()=>openDetail(el.dataset.key));
@@ -1083,17 +1121,21 @@ function openWA(req){window.open('https://api.whatsapp.com/send?text='+encodeURI
 function validarSaldos(items){
   const origem = document.getElementById('f-origem').value;
   if(!origem) return true;
+  const alertas = [];
   for(const it of items){
     const s = getSaldo(origem, it.n, it.c);
     if(s!==null){
-      // Allow qty 0 (used to flag falta)
-      if(parseFloat(it.q)>s.saldo && parseFloat(it.q)>0){
-        alert('Quantidade solicitada maior que o saldo disponível:\n'+it.n+'\nSolicitado: '+it.q+' | Disponível: '+s.saldo+' '+s.u);
-        return false;
+      if(s.saldo<=0){
+        alertas.push('⚠️ '+it.n+' — sem saldo em '+origem);
+      } else if(parseFloat(it.q)>s.saldo && parseFloat(it.q)>0){
+        alertas.push('⚠️ '+it.n+' — solicitado: '+it.q+' | disponível: '+s.saldo+' '+s.u);
       }
     }
   }
-  return true;
+  if(alertas.length>0){
+    toast('Atenção: saldo insuficiente em '+alertas.length+' item(s) — requisição enviada mesmo assim ⚠️');
+  }
+  return true; // always allow
 }
 
 function sendWA(){

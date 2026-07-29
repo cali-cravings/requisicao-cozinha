@@ -1303,16 +1303,19 @@ function addItem(){
   itemCount++;
   const card=document.createElement('div');
   card.className='item-card'; card.id='ic'+itemCount;
-  const nameRow=document.createElement('div'); nameRow.className='item-name-row';
+  const nameRow=document.createElement('div'); nameRow.className='item-name-row'; nameRow.style.flexWrap='wrap';
   const inp=document.createElement('input');
   inp.type='text'; inp.className='item-name-inp';
   inp.placeholder='Buscar insumo no estoque...';
   inp.autocomplete='off'; inp.autocorrect='off'; inp.spellcheck=false;
+  const saldoTag=document.createElement('span');
+  saldoTag.className='item-saldo-tag';
+  saldoTag.style.cssText='display:none;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;background:#e1f5ee;color:#0f6e56;white-space:nowrap;align-self:center';
   const delBtn=document.createElement('button');
   delBtn.type='button'; delBtn.className='item-del';
   delBtn.innerHTML='<i class="ti ti-trash"></i>';
   delBtn.onclick=()=>card.remove();
-  nameRow.appendChild(inp); nameRow.appendChild(delBtn);
+  nameRow.appendChild(inp); nameRow.appendChild(saldoTag); nameRow.appendChild(delBtn);
   const sugBox=document.createElement('div'); sugBox.className='sug-box';
   const qtyRow=document.createElement('div'); qtyRow.className='item-qty-row';
   const qtyInp=document.createElement('input');
@@ -1329,10 +1332,18 @@ function addItem(){
   function renderSug(items){
     results=items;
     if(!items.length){sugBox.style.display='none';return;}
+    const orig=document.getElementById('f-origem').value;
     sugBox.innerHTML=items.map((item,i)=>{
-      const cat=(item.s&&CAT[item.s])||{cls:'tag-coz',lb:'Cozinha'};
       const codBadge=item.c?'<span class="sug-cod">#'+item.c+'</span>':'<span class="sug-cod sem">S/CÓD</span>';
-      return '<div class="sug-item" data-i="'+i+'"><span class="sug-nm">'+cap(item.n)+'</span>'+codBadge+'</div>';
+      let saldoHtml='';
+      if(orig){
+        const s=getSaldo(orig,item.n,item.c);
+        if(s!==null){
+          const cls=s.saldo<=0?'zero':s.saldo<=5?'baixo':'';
+          saldoHtml='<span class="sug-saldo '+cls+'">'+s.saldo+' '+s.u+'</span>';
+        }
+      }
+      return '<div class="sug-item" data-i="'+i+'"><span class="sug-nm">'+cap(item.n)+'</span>'+codBadge+saldoHtml+'</div>';
     }).join('');
     sugBox.style.display='block';
     sugBox.querySelectorAll('.sug-item').forEach(el=>{
@@ -1344,8 +1355,32 @@ function addItem(){
     const item=results[idx]; if(!item) return;
     inp.value=cap(item.n);
     inp.dataset.cod=item.c||'';
+    inp.dataset.valid='true';
+    inp.style.borderColor='';
+    inp.style.boxShadow='';
     const fi=[...unitSel.options].findIndex(o=>o.value.toLowerCase()===item.u.toLowerCase());
     if(fi>=0) unitSel.selectedIndex=fi;
+    // Show stock next to qty field
+    const orig=document.getElementById('f-origem').value;
+    if(orig){
+      const s=getSaldo(orig,item.n,item.c);
+      if(s!==null){
+        qtyInp.max=s.saldo;
+        qtyInp.placeholder=s.saldo<=0?'Sem estoque':'Max: '+s.saldo;
+        qtyInp.title='Saldo disponível: '+s.saldo+' '+s.u;
+      }
+    }
+    // Update saldo tag in card
+    const orig2=document.getElementById('f-origem').value;
+    if(orig2){
+      const s2=getSaldo(orig2,item.n,item.c);
+      if(s2!==null){
+        saldoTag.style.display='inline-flex';
+        saldoTag.textContent='Estoque: '+s2.saldo+' '+s2.u;
+        saldoTag.style.background=s2.saldo<=0?'#faeeda':s2.saldo<=5?'#fff3e0':'#e1f5ee';
+        saldoTag.style.color=s2.saldo<=0?'#854f0b':s2.saldo<=5?'#e8560a':'#0f6e56';
+      }
+    }
     sugBox.style.display='none'; qtyInp.focus();
   }
   inp.addEventListener('input',()=>renderSug(searchDB(inp.value.trim())));

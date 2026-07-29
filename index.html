@@ -884,6 +884,20 @@ function closeDeleteModal(){
 function confirmDelete(){
   const senha=document.getElementById('modal-delete-input').value.trim();
 
+  // Zerado edit mode
+  if(window._zeradoMode){
+    window._zeradoMode=false;
+    if(senha!=='000813' && senha!=='2202'){
+      document.getElementById('modal-delete-input').value='';
+      document.getElementById('modal-delete-input').focus();
+      toast('Senha incorreta ❌');
+      return;
+    }
+    closeDeleteModal();
+    _abrirEditZerado();
+    return;
+  }
+
   // Gestão de estoque mode
   if(window._estoqueMode){
     window._estoqueMode=false;
@@ -1598,18 +1612,27 @@ function renderConsulta(){
 
 // ---- ZERADOS ----
 function atualizarZerado(estoque, cod, nome, un){
-  // Find real key in estoqueData
+  // Ask for password first
+  window._pendingZerado = {estoque, cod, nome, un};
+  document.getElementById('modal-delete-input').value='';
+  document.getElementById('modal-delete-title').textContent='Atualizar estoque';
+  document.getElementById('modal-delete-desc').textContent='Digite a senha para editar o saldo de '+nome;
+  window._zeradoMode = true;
+  window._estoqueMode = false;
+  document.getElementById('modal-delete').classList.add('show');
+  setTimeout(()=>document.getElementById('modal-delete-input').focus(),100);
+}
+
+function _abrirEditZerado(){
+  const {estoque, cod, nome, un} = window._pendingZerado||{};
   const data = estoqueData[estoque]||{};
-  // Try by cod first, then by name
   let realKey = null;
   if(cod && data[cod]) realKey = cod;
   if(!realKey){
     const found = Object.entries(data).find(([k,v])=>v&&v.n&&v.n.toUpperCase()===nome.toUpperCase());
     if(found) realKey = found[0];
   }
-
   if(realKey){
-    // Use existing editarSaldo modal
     _editEstoque = estoque;
     _editCod = realKey;
     const prod = data[realKey];
@@ -1619,8 +1642,7 @@ function atualizarZerado(estoque, cod, nome, un){
     document.getElementById('modal-edit-saldo').classList.add('show');
     setTimeout(()=>document.getElementById('edit-saldo-input').focus(),100);
   } else {
-    // Product not in estoque yet - go to gestão and pre-fill
-    toast('Produto não cadastrado neste estoque. Use Gestão de Estoque para adicionar.');
+    toast('Produto não cadastrado neste estoque.');
   }
 }
 

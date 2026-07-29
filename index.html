@@ -966,12 +966,13 @@ function markDelivered(){
       ? (semSaldo ? ' · ⚠️ sem saldo' : parcial ? ' · saldo: '+saldo+' '+un+' (parcial)' : ' · saldo: '+saldo+' '+un)
       : '';
     const qInfo = semSaldo ? 'Em falta' : 'Entregar: '+qEntrega+' '+un+(parcial?' de '+qty+' pedido':'');
-    return '<div class="entrega-item" style="gap:10px;opacity:'+(semSaldo?'.7':'1')+'">'+
-      '<input type="checkbox" id="chk_item_'+idx+'" '+checked+' '+disabled+
-      ' data-qentrega="'+qEntrega+'" data-u="'+un+'"'+
-      ' style="width:18px;height:18px;flex-shrink:0;cursor:'+(semSaldo?'not-allowed':'pointer')+'" '+
-      'onclick="event.stopPropagation()" onchange="atualizarDescEntrega()">'+
-      '<span class="entrega-item-nm" style="'+labelCls+'">'+it.n+
+    const togBg = semSaldo ? '#ddd' : (checked ? '#1d9e75' : '#ccc');
+    const togIcon = checked ? '✓' : '';
+    return '<div class="entrega-item" style="gap:12px;opacity:'+(semSaldo?'.6':'1')+'" onclick="'+(semSaldo?'':'toggleEntregaItem('+idx+')')+'" style2="cursor:'+(semSaldo?'default':'pointer')+'">'+
+      '<div id="chk_item_'+idx+'"'+
+      ' data-checked="'+(checked?'1':'0')+'" data-qentrega="'+qEntrega+'" data-u="'+un+'" data-disabled="'+(semSaldo?'1':'0')+'"'+
+      ' style="width:26px;height:26px;border-radius:6px;background:'+togBg+';flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;transition:background .2s">'+togIcon+'</div>'+
+      '<span class="entrega-item-nm" style="'+labelCls+';cursor:'+(semSaldo?'default':'pointer')+'">'+it.n+
         '<br><span style="font-size:11px;color:var(--tx3)">'+qInfo+saldoInfo+'</span>'+
       '</span>'+
     '</div>';
@@ -984,12 +985,22 @@ function markDelivered(){
   setTimeout(()=>document.getElementById('entrega-senha-input').focus(),100);
 }
 
+function toggleEntregaItem(idx){
+  const el = document.getElementById('chk_item_'+idx);
+  if(!el || el.dataset.disabled==='1') return;
+  const isChecked = el.dataset.checked==='1';
+  el.dataset.checked = isChecked ? '0' : '1';
+  el.style.background = isChecked ? '#ccc' : '#1d9e75';
+  el.textContent = isChecked ? '' : '✓';
+  atualizarDescEntrega();
+}
+
 function atualizarDescEntrega(){
   const items = currentDetail.items||[];
   let entregar = 0, falta = 0;
   items.forEach((it, idx)=>{
     const chk = document.getElementById('chk_item_'+idx);
-    if(chk && chk.checked) entregar++;
+    if(chk && chk.dataset.checked==='1') entregar++;
     else falta++;
   });
   document.getElementById('entrega-desc').textContent =
@@ -1016,8 +1027,8 @@ function confirmarEntregaParcial(){
   // Use checkbox + limited quantity from data attributes
   const updatedItems = items.map((it, idx)=>{
     const chk = document.getElementById('chk_item_'+idx);
-    const vaientregar = chk ? chk.checked : true;
-    if(!vaientregar || (chk && chk.disabled)){
+    const vaientregar = chk ? chk.dataset.checked==='1' : true;
+    if(!vaientregar || (chk && chk.dataset.disabled==='1' && chk.dataset.checked!=='1')){
       return {...it, falta:true, qOriginal:it.q, q:'0'};
     }
     // Use the limited quantity (capped by saldo)

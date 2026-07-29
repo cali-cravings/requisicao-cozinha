@@ -451,9 +451,9 @@ if('serviceWorker' in navigator){
     <h2>Confirmar entrega</h2>
     <p id="entrega-desc">Marque os itens que serão entregues.</p>
     <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">✅ Marque para entregar · Desmarque para falta</div>
-    <div id="entrega-items-list"></div>
-    <label class="modal-field-label" style="margin-top:14px">Senha de autorização</label>
-    <input class="modal-input" id="entrega-senha-input" type="password" placeholder="••••••" maxlength="10">
+    <div id="entrega-items-list" onclick="event.stopPropagation()"></div>
+    <div class="modal-field-label" style="margin-top:14px">Senha de autorização</div>
+    <input class="modal-input" id="entrega-senha-input" type="password" placeholder="••••••" maxlength="10" onclick="event.stopPropagation()">
     <div class="modal-entrega-btns">
       <button class="modal-cancel" onclick="fecharEntregaModal()">Cancelar</button>
       <button class="modal-confirm" style="background:#2C3E35" onclick="confirmarEntregaParcial()">Confirmar entrega</button>
@@ -970,7 +970,7 @@ function markDelivered(){
       '<input type="checkbox" id="chk_item_'+idx+'" '+checked+' '+disabled+
       ' data-qentrega="'+qEntrega+'" data-u="'+un+'"'+
       ' style="width:18px;height:18px;flex-shrink:0;cursor:'+(semSaldo?'not-allowed':'pointer')+'" '+
-      'onchange="atualizarDescEntrega()">'+
+      'onclick="event.stopPropagation()" onchange="atualizarDescEntrega()">'+
       '<span class="entrega-item-nm" style="'+labelCls+'">'+it.n+
         '<br><span style="font-size:11px;color:var(--tx3)">'+qInfo+saldoInfo+'</span>'+
       '</span>'+

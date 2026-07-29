@@ -966,13 +966,16 @@ function markDelivered(){
       ? (semSaldo ? ' · ⚠️ sem saldo' : parcial ? ' · saldo: '+saldo+' '+un+' (parcial)' : ' · saldo: '+saldo+' '+un)
       : '';
     const qInfo = semSaldo ? 'Em falta' : 'Entregar: '+qEntrega+' '+un+(parcial?' de '+qty+' pedido':'');
-    const togBg = semSaldo ? '#ddd' : (checked ? '#1d9e75' : '#ccc');
-    const togIcon = checked ? '✓' : '';
-    return '<div class="entrega-item" style="gap:12px;opacity:'+(semSaldo?'.6':'1')+'" onclick="'+(semSaldo?'':'toggleEntregaItem('+idx+')')+'" style2="cursor:'+(semSaldo?'default':'pointer')+'">'+
+    const isChk = !semSaldo; // has stock = checked by default
+    const togBg = semSaldo ? '#ddd' : '#1d9e75';
+    const togIcon = isChk ? '✓' : '';
+    const onclk = semSaldo ? '' : 'onclick="toggleEntregaItem('+idx+');event.stopPropagation()"';
+    return '<div class="entrega-item" style="gap:12px;opacity:'+(semSaldo?'.6':'1')+'">'+
       '<div id="chk_item_'+idx+'"'+
-      ' data-checked="'+(checked?'1':'0')+'" data-qentrega="'+qEntrega+'" data-u="'+un+'" data-disabled="'+(semSaldo?'1':'0')+'"'+
-      ' style="width:26px;height:26px;border-radius:6px;background:'+togBg+';flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;transition:background .2s">'+togIcon+'</div>'+
-      '<span class="entrega-item-nm" style="'+labelCls+';cursor:'+(semSaldo?'default':'pointer')+'">'+it.n+
+      ' data-checked="'+(isChk?'1':'0')+'" data-qentrega="'+qEntrega+'" data-u="'+un+'" data-disabled="'+(semSaldo?'1':'0')+'"'+
+      ' '+onclk+
+      ' style="width:28px;height:28px;border-radius:8px;background:'+togBg+';flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;cursor:'+(semSaldo?'not-allowed':'pointer')+';transition:background .2s;user-select:none">'+togIcon+'</div>'+
+      '<span class="entrega-item-nm" style="'+labelCls+'">'+it.n+
         '<br><span style="font-size:11px;color:var(--tx3)">'+qInfo+saldoInfo+'</span>'+
       '</span>'+
     '</div>';
@@ -989,9 +992,10 @@ function toggleEntregaItem(idx){
   const el = document.getElementById('chk_item_'+idx);
   if(!el || el.dataset.disabled==='1') return;
   const isChecked = el.dataset.checked==='1';
-  el.dataset.checked = isChecked ? '0' : '1';
-  el.style.background = isChecked ? '#ccc' : '#1d9e75';
-  el.textContent = isChecked ? '' : '✓';
+  const novoEstado = !isChecked;
+  el.dataset.checked = novoEstado ? '1' : '0';
+  el.style.background = novoEstado ? '#1d9e75' : '#ccc';
+  el.textContent = novoEstado ? '✓' : '';
   atualizarDescEntrega();
 }
 

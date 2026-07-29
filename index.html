@@ -1104,6 +1104,8 @@ function confirmarEditSaldo(){
   fecharEditSaldo();
   toast('Saldo atualizado ✓');
   setTimeout(renderEstoque, 500);
+  // If on zerados screen, refresh it too
+  if(document.getElementById('s-zerados').classList.contains('active')) setTimeout(renderZerados, 600);
 }
 
 function getSaldoKey(nome, cod){
@@ -1580,6 +1582,33 @@ function renderConsulta(){
 }
 
 // ---- ZERADOS ----
+function atualizarZerado(estoque, cod, nome, un){
+  // Find real key in estoqueData
+  const data = estoqueData[estoque]||{};
+  // Try by cod first, then by name
+  let realKey = null;
+  if(cod && data[cod]) realKey = cod;
+  if(!realKey){
+    const found = Object.entries(data).find(([k,v])=>v&&v.n&&v.n.toUpperCase()===nome.toUpperCase());
+    if(found) realKey = found[0];
+  }
+
+  if(realKey){
+    // Use existing editarSaldo modal
+    _editEstoque = estoque;
+    _editCod = realKey;
+    const prod = data[realKey];
+    document.getElementById('edit-saldo-title').textContent = prod.n||nome;
+    document.getElementById('edit-saldo-desc').textContent = 'Estoque: '+estoque+' | Saldo atual: 0 '+un;
+    document.getElementById('edit-saldo-input').value = '';
+    document.getElementById('modal-edit-saldo').classList.add('show');
+    setTimeout(()=>document.getElementById('edit-saldo-input').focus(),100);
+  } else {
+    // Product not in estoque yet - go to gestão and pre-fill
+    toast('Produto não cadastrado neste estoque. Use Gestão de Estoque para adicionar.');
+  }
+}
+
 function abrirZerados(){
   document.getElementById('zer-sel').value='';
   document.getElementById('zer-busca').value='';
@@ -1607,14 +1636,20 @@ function renderZerados(){
     return;
   }
   list.innerHTML = '<div style="font-size:12px;color:#854f0b;margin-bottom:10px;font-weight:600">'+zerados.length+' produto(s) com saldo zero</div>'+
-    zerados.map(item=>
-      '<div class="saldo-row">'+
+    zerados.map(item=>{
+      const codSafe = String(item.c||'').replace(/[^a-z0-9]/gi,'_');
+      const estSafe = item.est.replace(/'/g,'');
+      return '<div class="saldo-row" style="gap:6px">'+
         (item.c?'<span class="saldo-cod">#'+item.c+'</span>':'')+
         '<span class="saldo-nm">'+item.n+'</span>'+
-        '<span style="font-size:11px;color:var(--tx2);margin-right:8px">'+item.est+'</span>'+
-        '<span class="saldo-val zero">0 '+item.u+'</span>'+
-      '</div>'
-    ).join('');
+        '<span style="font-size:10px;color:var(--tx3);margin-right:4px;white-space:nowrap">'+item.est+'</span>'+
+        '<span class="saldo-val zero" style="margin-right:4px">0 '+item.u+'</span>'+
+        '<button data-est="'+estSafe+'" data-cod="'+codSafe+'" data-nome="'+item.n.replace(/"/g,'')+'" data-un="'+item.u+'" '+
+        'onclick="atualizarZerado(this.dataset.est,this.dataset.cod,this.dataset.nome,this.dataset.un)" '+
+        'style="background:#2C3E35;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0;font-weight:500">'+
+        '✏️</button>'+
+      '</div>';
+    }).join('');
 }
 
 // ---- GESTÃO ESTOQUE ----

@@ -953,6 +953,9 @@ function editReq(){
     ninp.value=it.n;
     ninp.dataset.cod=it.c||'';
     ninp.dataset.valid='true'; // pre-existing items are valid
+    // Lock unit
+    const uSel=last.querySelector('.item-unit-sel');
+    if(uSel){uSel.disabled=true;uSel.style.opacity='0.6';}
     last.querySelector('.item-qty-inp').value=it.q;
     const us=last.querySelector('.item-unit-sel');
     const fi=[...us.options].findIndex(o=>o.value.toLowerCase()===it.u.toLowerCase());
@@ -1425,6 +1428,10 @@ function addItem(){
     inp.style.boxShadow='';
     const fi=[...unitSel.options].findIndex(o=>o.value.toLowerCase()===item.u.toLowerCase());
     if(fi>=0) unitSel.selectedIndex=fi;
+    // Lock unit to estoque unit
+    unitSel.disabled=true;
+    unitSel.style.opacity='0.6';
+    unitSel.title='Unidade definida pelo estoque: '+item.u;
     // Show stock next to qty field
     const orig=document.getElementById('f-origem').value;
     if(orig){
@@ -1455,6 +1462,7 @@ function addItem(){
     inp.dataset.valid='false';
     if(saldoTag) saldoTag.style.display='none';
     inp.style.borderColor=''; inp.style.boxShadow='';
+    unitSel.disabled=false; unitSel.style.opacity=''; unitSel.title='';
     const orig=document.getElementById('f-origem').value;
     if(!orig){
       sugBox.innerHTML='<div class="sug-item" style="color:var(--tx2);font-size:12px;pointer-events:none">⚠️ Selecione o Estoque Origem primeiro</div>';

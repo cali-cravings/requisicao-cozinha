@@ -796,7 +796,8 @@ function renderHome(){
     const temFalta=(r.items||[]).some(it=>it.falta===true);
     const alertaHtml=temFalta?'<span class="alerta-badge">⚠️ Item em falta</span>':'';
     // Check if any item has insufficient saldo
-    const temSaldoBaixo = (r.items||[]).some(it=>{
+    // Only show saldo alert on pending/sent - not on delivered
+    const temSaldoBaixo = r.status!=='delivered' && (r.items||[]).some(it=>{
       const orig = r.origem||'';
       const s = getSaldo(orig, it.n, it.c);
       return s!==null && (s.saldo<=0 || (parseFloat(it.q)>s.saldo && parseFloat(it.q)>0));

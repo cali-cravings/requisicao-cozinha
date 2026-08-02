@@ -1242,30 +1242,33 @@ function movimentarEstoque(req){
   const origem = req.origem;
   const destino = req.destino;
   req.items.forEach(it=>{
-    if(!it.c && !it.n) return;
+    if(!it || (!it.c && !it.n)) return;
+    if(it.falta) return; // skip items marked as falta
     const qty = parseFloat(it.q)||0;
     if(qty<=0) return;
-    const key = it.c ? String(it.c) : it.n.toUpperCase().replace(/[^A-Z0-9]/g,'_').slice(0,20);
+    const nome = (it.n||'').toUpperCase();
+    const key = it.c ? String(it.c) : nome.replace(/[^A-Z0-9]/g,'_').slice(0,20);
+    if(!key) return;
 
     // Debit from origem
-    const itemOrig = getSaldo(origem, it.n, it.c);
+    const itemOrig = getSaldo(origem, nome, it.c);
     if(itemOrig){
       const novoSaldo = Math.max(0, (itemOrig.saldo||0) - qty);
       EST_REF.child(origem).child(key).update({saldo: novoSaldo});
     }
 
     // Credit to destino — create product if it doesn't exist yet
-    const itemDest = getSaldo(destino, it.n, it.c);
+    const itemDest = getSaldo(destino, nome, it.c);
     if(itemDest){
       // Product exists in destino — just add qty
       const novoSaldoDest = (itemDest.saldo||0) + qty;
       EST_REF.child(destino).child(key).update({saldo: novoSaldoDest});
     } else {
       // Product doesn't exist in destino — create it with received qty
-      const baseItem = itemOrig || {c: it.c||0, n: it.n, u: it.u||'UN'};
+      const baseItem = itemOrig || {c: it.c||0, n: nome, u: it.u||'UN'};
       EST_REF.child(destino).child(key).set({
         c: baseItem.c||0,
-        n: (it.n||'').toUpperCase(),
+        n: nome||baseItem.n||'',
         u: baseItem.u||it.u||'UN',
         saldo: qty,
         ativo: true

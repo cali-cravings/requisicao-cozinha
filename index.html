@@ -1151,8 +1151,10 @@ function getSaldo(estoque, nome, cod){
   const data = estoqueData[estoque];
   // Try by code first
   if(cod && data[String(cod)]) return data[String(cod)];
-  // Try by name
-  const found = Object.values(data).find(i=>i.n.toUpperCase()===nome.toUpperCase());
+  // Try by name - protect against undefined i.n
+  const nomeUp = (nome||'').toUpperCase();
+  if(!nomeUp) return null;
+  const found = Object.values(data).find(i=>i && i.n && i.n.toUpperCase()===nomeUp);
   return found || null;
 }
 

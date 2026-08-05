@@ -464,6 +464,26 @@ if('serviceWorker' in navigator){
   </div>
 </div>
 
+
+<!-- MODAL FORÇAR ENTREGA -->
+<div class="modal-edit-overlay" id="modal-forcar-entrega">
+  <div class="modal-edit-box">
+    <h2 id="forcar-titulo">Forçar entrega</h2>
+    <p id="forcar-desc" style="font-size:12px;color:#854f0b;background:#fdf0ea;padding:8px;border-radius:8px;margin-bottom:12px">⚠️ Use apenas quando o produto existe fisicamente mas o sistema mostra saldo zero.</p>
+    <label class="modal-field-label">Senha gerencial (130130)</label>
+    <input class="modal-input" id="forcar-senha" type="password" placeholder="••••••" maxlength="10">
+    <label class="modal-field-label" style="margin-top:12px">Saldo que vai restar no estoque após entrega</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input class="modal-input" id="forcar-saldo" type="number" min="0" step="0.5" placeholder="0" style="margin:0;flex:1">
+      <span id="forcar-un" style="font-weight:600;color:var(--tx2);min-width:30px"></span>
+    </div>
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="modal-cancel" onclick="fecharForcarModal()">Cancelar</button>
+      <button class="modal-confirm" style="background:#e8560a" onclick="confirmarForcar()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-delete">
   <div class="modal-box">
     <h2 id="modal-delete-title">Excluir requisicao</h2>
@@ -1019,14 +1039,106 @@ function renderEntregaModal(items, origem){
       '<div '+onclick+' style="width:28px;height:28px;min-width:28px;border-radius:8px;background:'+bg+
       ';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;cursor:'+cursor+
       ';transition:background .2s;user-select:none" id="tog_'+idx+'">'+icon+'</div>'+
-      '<span style="'+labelCls+'">'+it.n+
+      '<span style="'+labelCls+';flex:1">'+it.n+
         '<br><span style="font-size:11px;color:var(--tx3)">'+qInfo+saldoInfo+'</span>'+
       '</span>'+
+      (st.bloqueado?'<button onclick="forcarEntregaItem('+idx+')" style="margin-left:8px;flex-shrink:0;background:none;border:1.5px solid #e8560a;color:#e8560a;border-radius:8px;padding:4px 12px;font-size:12px;cursor:pointer;font-weight:600">🔓 Forçar</button>':'')+
     '</div>';
   }).join('');
 
   document.getElementById('entrega-items-list').innerHTML = listHtml;
   atualizarDescEntrega();
+}
+
+let _forcarIdx = null;
+function forcarEntregaItem(idx){
+  const st = window._entregaState[idx];
+  if(!st) return;
+  const items = currentDetail.items||[];
+  const it = items[idx];
+  if(!it) return;
+  _forcarIdx = idx;
+  document.getElementById('forcar-titulo').textContent = 'Forçar entrega — '+it.n;
+  document.getElementById('forcar-un').textContent = st.un||it.u||'UN';
+  document.getElementById('forcar-senha').value='';
+  document.getElementById('forcar-saldo').value='';
+  document.getElementById('modal-forcar-entrega').classList.add('show');
+  setTimeout(()=>document.getElementById('forcar-senha').focus(),100);
+}
+
+function fecharForcarModal(){
+  document.getElementById('modal-forcar-entrega').classList.remove('show');
+}
+
+function confirmarForcar(){
+  const senha = document.getElementById('forcar-senha').value.trim();
+  if(senha !== '130130'){
+    document.getElementById('forcar-senha').value='';
+    document.getElementById('forcar-senha').focus();
+    toast('Senha incorreta ❌');
+    return;
+  }
+  const saldoRestante = parseFloat(document.getElementById('forcar-saldo').value)||0;
+  const idx = _forcarIdx;
+  const st = window._entregaState[idx];
+  const items = currentDetail.items||[];
+  const it = items[idx];
+  if(!st || !it) return;
+
+  // Calculate what was delivered = saldoRestante is what remains AFTER delivery
+  // Update stock: set saldo to saldoRestante (after delivery)
+  const origem = currentDetail.origem||'';
+  const un = st.un||it.u||'UN';
+
+  // Find Firebase key for this product
+  const data = estoqueData[origem]||{};
+  const cod = it.c ? String(it.c) : null;
+  let fbKey = cod && data[cod] ? cod : null;
+  if(!fbKey && it.n){
+    const found = Object.entries(data).find(([k,v])=>v&&v.n&&v.n.toUpperCase()===(it.n||'').toUpperCase());
+    if(found) fbKey = found[0];
+  }
+
+  if(fbKey){
+    // Update existing product saldo
+    EST_REF.child(origem).child(fbKey).update({saldo: saldoRestante});
+  } else {
+    // Create product in estoque with remaining saldo
+    const key = cod || (it.n||'').toUpperCase().replace(/[^A-Z0-9]/g,'_').slice(0,20);
+    EST_REF.child(origem).child(key).set({
+      c: it.c||0, n:(it.n||'').toUpperCase(), u:un, saldo:saldoRestante
+    });
+  }
+
+  // Unlock this item in entregaState
+  st.bloqueado = false;
+  st.semSaldo = false;
+  st.acimaSaldo = false;
+  st.entregar = true;
+  st.qEntrega = parseFloat(it.q)||0;
+  st.saldoDisp = saldoRestante + (parseFloat(it.q)||0); // was this + delivered
+
+  // Update visual
+  const tog = document.getElementById('tog_'+idx);
+  if(tog){
+    tog.style.background='#1d9e75';
+    tog.textContent='✓';
+    tog.onclick=()=>toggleItem(idx);
+    tog.style.cursor='pointer';
+  }
+  // Update info text
+  const row = tog && tog.parentElement;
+  if(row){
+    const span = row.querySelector('span span');
+    if(span) span.textContent='✓ Entregar: '+st.qEntrega+' '+un+' (forçado — saldo restante: '+saldoRestante+' '+un+')';
+    // Remove forcar button
+    const btn = row.querySelector('button');
+    if(btn) btn.remove();
+  }
+
+  fecharForcarModal();
+  atualizarDescEntrega();
+  toast('Entrega liberada ✓ — saldo restante salvo: '+saldoRestante+' '+un);
 }
 
 function toggleItem(idx){

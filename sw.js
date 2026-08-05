@@ -1,80 +1,22 @@
-{
-  "name": "Cali Cravings — Requisição",
-  "short_name": "Cali Req",
-  "description": "App de requisição de insumos do Cali Cravings Gastro Bar",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#2C3E35",
-  "theme_color": "#2C3E35",
-  "orientation": "portrait-primary",
-  "scope": "./",
-  "lang": "pt-BR",
-  "icons": [
-    {
-      "src": "./icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "./icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ],
-  "categories": ["productivity", "food"],
-  "shortcuts": [
-    {
-      "name": "Nova Requisição",
-      "short_name": "Nova Req",
-      "description": "Criar nova requisição de insumos",
-      "url": "./index.html",
-      "icons": [{ "src": "./icons/icon-96x96.png", "sizes": "96x96" }]
-    }
-  ]
-}
+// Cali Cravings - Service Worker v3
+const CACHE_NAME = 'cali-cravings-v3';
+const urlsToCache = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+
+self.addEventListener('install', event => {
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+    ).then(() => clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => response || fetch(event.request))
+  );
+});

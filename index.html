@@ -470,9 +470,9 @@ if('serviceWorker' in navigator){
   <div class="modal-edit-box">
     <h2 id="forcar-titulo">Forçar entrega</h2>
     <p id="forcar-desc" style="font-size:12px;color:#854f0b;background:#fdf0ea;padding:8px;border-radius:8px;margin-bottom:12px">⚠️ Use apenas quando o produto existe fisicamente mas o sistema mostra saldo zero.</p>
-    <label class="modal-field-label">Senha gerencial (130130)</label>
+    <label class="modal-field-label">Senha do estoquista</label>
     <input class="modal-input" id="forcar-senha" type="password" placeholder="••••••" maxlength="10">
-    <label class="modal-field-label" style="margin-top:12px">Saldo que vai restar no estoque após entrega</label>
+    <label class="modal-field-label" style="margin-top:12px">Quantidade física encontrada no estoque (antes da entrega)</label>
     <div style="display:flex;gap:8px;align-items:center">
       <input class="modal-input" id="forcar-saldo" type="number" min="0" step="0.5" placeholder="0" style="margin:0;flex:1">
       <span id="forcar-un" style="font-weight:600;color:var(--tx2);min-width:30px"></span>
@@ -1072,21 +1072,22 @@ function fecharForcarModal(){
 
 function confirmarForcar(){
   const senha = document.getElementById('forcar-senha').value.trim();
-  if(senha !== '130130'){
+  if(senha !== 'ronaldo'){
     document.getElementById('forcar-senha').value='';
     document.getElementById('forcar-senha').focus();
     toast('Senha incorreta ❌');
     return;
   }
-  const saldoRestante = parseFloat(document.getElementById('forcar-saldo').value)||0;
+  const fisico = parseFloat(document.getElementById('forcar-saldo').value)||0;
   const idx = _forcarIdx;
   const st = window._entregaState[idx];
   const items = currentDetail.items||[];
   const it = items[idx];
   if(!st || !it) return;
 
-  // Calculate what was delivered = saldoRestante is what remains AFTER delivery
-  // Update stock: set saldo to saldoRestante (after delivery)
+  const qEntregue = parseFloat(it.q)||0;
+  // Remaining = physical found - quantity being delivered
+  const saldoRestante = Math.max(0, fisico - qEntregue);
   const origem = currentDetail.origem||'';
   const un = st.un||it.u||'UN';
 
@@ -1115,8 +1116,9 @@ function confirmarForcar(){
   st.semSaldo = false;
   st.acimaSaldo = false;
   st.entregar = true;
-  st.qEntrega = parseFloat(it.q)||0;
-  st.saldoDisp = saldoRestante + (parseFloat(it.q)||0); // was this + delivered
+  st.qEntrega = qEntregue;
+  st.saldoDisp = fisico;
+  st.forcado = true; // skip movimentarEstoque for this item (saldo already set)
 
   // Update visual
   const tog = document.getElementById('tog_'+idx);
@@ -1130,7 +1132,7 @@ function confirmarForcar(){
   const row = tog && tog.parentElement;
   if(row){
     const span = row.querySelector('span span');
-    if(span) span.textContent='✓ Entregar: '+st.qEntrega+' '+un+' (forçado — saldo restante: '+saldoRestante+' '+un+')';
+    if(span) span.textContent='✓ Entregar: '+qEntregue+' '+un+' | Físico: '+fisico+' | Resta: '+saldoRestante+' '+un;
     // Remove forcar button
     const btn = row.querySelector('button');
     if(btn) btn.remove();
@@ -1138,7 +1140,7 @@ function confirmarForcar(){
 
   fecharForcarModal();
   atualizarDescEntrega();
-  toast('Entrega liberada ✓ — saldo restante salvo: '+saldoRestante+' '+un);
+  toast('Entrega liberada ✓ — físico: '+fisico+' '+un+' | Entregando: '+qEntregue+' '+un+' | Saldo restante: '+saldoRestante+' '+un);
 }
 
 function toggleItem(idx){
@@ -1362,6 +1364,7 @@ function movimentarEstoque(req){
   req.items.forEach(it=>{
     if(!it || (!it.c && !it.n)) return;
     if(it.falta) return; // skip items marked as falta
+    if(it.forcado) return; // skip forced items (saldo already updated)
     const qty = parseFloat(it.q)||0;
     if(qty<=0) return;
     const nome = (it.n||'').toUpperCase();

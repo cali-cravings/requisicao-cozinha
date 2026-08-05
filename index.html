@@ -976,8 +976,9 @@ function markDelivered(){
     const s = getSaldo(origem, it.n, it.c);
     const qty = parseFloat(it.q)||0;
     const saldo = s ? (s.saldo||0) : null;
-    const semSaldo = saldo !== null && saldo <= 0;
-    const acimaSaldo = saldo !== null && !semSaldo && qty > saldo;
+    // null = product not in estoque = treat as sem saldo
+    const semSaldo = saldo === null || saldo <= 0;
+    const acimaSaldo = saldo !== null && saldo > 0 && qty > saldo;
     const bloqueado = semSaldo || acimaSaldo;
     const qEntrega = bloqueado ? 0 : qty;
     const un = (s ? s.u : it.u)||it.u||'UN';
@@ -1007,9 +1008,12 @@ function renderEntregaModal(items, origem){
     const labelCls = st.semSaldo ? 'color:#aaa' : (st.entregar ? 'color:#0f6e56' : 'color:var(--tx2)');
     const saldoInfo = st.semSaldo ? ' · ⚠️ sem saldo' :
       (st.qEntrega < st.qPedido ? ' · saldo: '+st.qEntrega+' '+st.un+' (parcial)' : ' · saldo ok');
-    const qInfo = st.semSaldo ? 'Em falta (sem saldo)' :
-      (st.entregar ? 'Entregar: '+st.qEntrega+' '+st.un : 'Pedido: '+st.qPedido+' '+st.un+' · marque para entregar');
-    const cursor = st.semSaldo ? 'not-allowed' : 'pointer';
+    let qInfo;
+    if(st.saldoDisp===null) qInfo = '⛔ Não cadastrado no estoque';
+    else if(st.semSaldo) qInfo = '⛔ Sem saldo — bloqueado';
+    else if(st.acimaSaldo) qInfo = '⛔ Pedido: '+st.qPedido+' '+st.un+' | Disponível: '+st.saldoDisp+' '+st.un;
+    else qInfo = st.entregar ? '✓ Entregar: '+st.qEntrega+' '+st.un : 'Pedido: '+st.qPedido+' '+st.un+' · marque para entregar';
+    const cursor = st.bloqueado ? 'not-allowed' : 'pointer';
     const onclick = st.semSaldo ? '' : 'onclick="toggleItem('+idx+')"';
     return '<div class="entrega-item" style="gap:12px;opacity:'+(st.bloqueado?'.5':'1')+'">'+
       '<div '+onclick+' style="width:28px;height:28px;min-width:28px;border-radius:8px;background:'+bg+

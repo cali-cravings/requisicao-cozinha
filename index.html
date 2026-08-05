@@ -581,8 +581,10 @@ if('serviceWorker' in navigator){
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div class="clb" style="margin-bottom:0">SALDOS ATUAIS</div>
-        <button onclick="zerarEstoque()" style="background:none;border:.5px solid #e24b4a;color:#e24b4a;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:500">🗑 Zerar estoque</button>
+        <button onclick="zerarEstoque()" style="background:none;border:.5px solid #e24b4a;color:#e24b4a;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:500">🗑 Zerar</button>
       </div>
+      <p style="font-size:12px;color:var(--tx2);margin-bottom:10px">Toque no número para editar o saldo diretamente.</p>
+      <input type="text" id="est-busca-view" class="finp" placeholder="🔍 Buscar produto..." oninput="renderEstoque()" style="margin-bottom:8px" autocomplete="off">
       <select id="est-sel-view" class="finp" style="margin-bottom:12px" onchange="renderEstoque()">
         <option value="">Selecione o estoque</option>
         <option>MASHA ADM</option>
@@ -1834,24 +1836,51 @@ function abrirGestaoEstoque(){
 
 function renderEstoque(){
   const sel = document.getElementById('est-sel-view').value;
+  const busca = (document.getElementById('est-busca-view')||{value:''}).value.toUpperCase().trim();
   const list = document.getElementById('est-list');
   if(!sel){list.innerHTML='';return;}
   const data = estoqueData[sel]||{};
-  const items = Object.values(data).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n));
+  let items = Object.values(data).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n));
+  if(busca) items = items.filter(i=>i.n.includes(busca));
   if(!items.length){
-    list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto cadastrado neste estoque.</div>';
+    list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto encontrado.</div>';
     return;
   }
-  list.innerHTML = items.map(item=>{
-    const cls = item.saldo<=0?'zero':item.saldo<=5?'baixo':'';
+  list.innerHTML = items.map((item,i)=>{
+    const cls = item.saldo<=0?'#e24b4a':item.saldo<=5?'#e8560a':'#1d9e75';
     const cod = String(item.c||'');
-    return '<div class="saldo-row">'+
-      '<span class="saldo-cod">#'+(item.c||'—')+'</span>'+
-      '<span class="saldo-nm">'+item.n+'</span>'+
-      '<span class="saldo-val '+cls+'">'+item.saldo+' '+item.u+'</span>'+
-      '<button class="saldo-edit" data-est="'+sel+'" data-cod="'+cod.replace(/"/g,'')+'" onclick="editarSaldo(this.dataset.est,this.dataset.cod)">&#9998;</button>'+
+    const uid = 'est_inp_'+i;
+    return '<div class="saldo-row" style="gap:8px;padding:8px 0">'+
+      (item.c?'<span class="saldo-cod" style="min-width:32px">#'+item.c+'</span>':'')+
+      '<span class="saldo-nm" style="flex:1;font-size:13px">'+item.n+'</span>'+
+      '<span style="font-size:11px;color:var(--tx2);margin-right:4px;white-space:nowrap">'+item.u+'</span>'+
+      '<input id="'+uid+'" type="number" value="'+item.saldo+'" min="0" step="0.5" '+
+      'style="width:72px;border:.5px solid var(--bdr2);border-radius:8px;padding:5px 8px;font-size:13px;font-weight:600;color:'+cls+';text-align:center;background:var(--surf);-moz-appearance:textfield" '+
+      'data-est="'+sel+'" data-cod="'+cod+'" data-orig="'+item.saldo+'" '+
+      'onchange="salvarSaldoInline(this)" onblur="salvarSaldoInline(this)">'+
     '</div>';
   }).join('');
+}
+
+function salvarSaldoInline(el){
+  const val = parseFloat(el.value);
+  if(isNaN(val)||val<0){el.value=el.dataset.orig;return;}
+  if(String(val)===String(el.dataset.orig)) return; // no change
+  const est = el.dataset.est;
+  const cod = el.dataset.cod;
+  // Find Firebase key
+  const data = estoqueData[est]||{};
+  let fbKey = cod && data[cod] ? cod : null;
+  if(!fbKey){
+    const found = Object.entries(data).find(([k,v])=>String(v.c)===String(cod));
+    if(found) fbKey = found[0];
+  }
+  if(!fbKey) return;
+  EST_REF.child(est).child(fbKey).update({saldo: val});
+  el.dataset.orig = val;
+  // Update color
+  el.style.color = val<=0?'#e24b4a':val<=5?'#e8560a':'#1d9e75';
+  toast('Saldo atualizado ✓');
 }
 
 function zerarEstoque(){

@@ -584,8 +584,7 @@ if('serviceWorker' in navigator){
         <button onclick="zerarEstoque()" style="background:none;border:.5px solid #e24b4a;color:#e24b4a;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:500">🗑 Zerar</button>
       </div>
       <p style="font-size:12px;color:var(--tx2);margin-bottom:10px">Toque no número para editar o saldo diretamente.</p>
-      <input type="text" id="est-busca-view" class="finp" placeholder="🔍 Buscar produto..." oninput="renderEstoque()" style="margin-bottom:8px" autocomplete="off">
-      <select id="est-sel-view" class="finp" style="margin-bottom:12px" onchange="renderEstoque()">
+      <select id="est-sel-view" class="finp" style="margin-bottom:8px" onchange="renderEstoque()">
         <option value="">Selecione o estoque</option>
         <option>MASHA ADM</option>
         <option>MASHA PIER</option>
@@ -593,6 +592,7 @@ if('serviceWorker' in navigator){
         <option>BAR</option>
         <option>CALI CAFÉ</option>
       </select>
+      <input type="text" id="est-busca-view" class="finp" placeholder="🔍 Buscar produto..." oninput="renderEstoque()" style="margin-bottom:10px" autocomplete="off">
       <div id="est-list"></div>
     </div>
 

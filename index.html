@@ -653,6 +653,7 @@ if('serviceWorker' in navigator){
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <script>
@@ -727,18 +728,26 @@ let allReqs=[]; // cache local atualizado pelo Firebase
 
 // ---- FIREBASE LISTENER ----
 function initFirebase(){
-  initEstoque();
   showLoading(true);
-  REQ_REF.orderByChild('ts').on('value', snap=>{
-    allReqs=[];
-    snap.forEach(child=>{
-      allReqs.unshift({fbKey:child.key,...child.val()});
+  firebase.auth().signInAnonymously().catch(e=>{
+    console.error('Auth error:',e);
+    showLoading(false);
+    toast('Erro de autenticação ⚠️');
+  });
+  firebase.auth().onAuthStateChanged(user=>{
+    if(!user) return;
+    initEstoque();
+    REQ_REF.orderByChild('ts').on('value', snap=>{
+      allReqs=[];
+      snap.forEach(child=>{
+        allReqs.unshift({fbKey:child.key,...child.val()});
+      });
+      showLoading(false);
+      renderHome();
+    }, err=>{
+      showLoading(false);
+      toast('Erro de conexão ⚠️');
     });
-    showLoading(false);
-    renderHome();
-  }, err=>{
-    showLoading(false);
-    toast('Erro de conexão ⚠️');
   });
 }
 

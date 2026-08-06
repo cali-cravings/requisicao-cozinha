@@ -1216,6 +1216,7 @@ function confirmarEntregaParcial(){
     const item = {...it, falta:false, q:String(st.qEntrega)};
     if(st.qEntrega < st.qPedido) item.qOriginal = it.q;
     else delete item.qOriginal;
+    if(st.forcado) item.forcado = true; // skip movimentarEstoque
     return item;
   });
 

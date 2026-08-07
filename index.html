@@ -697,20 +697,23 @@ function fmtTs(ts){
 function searchDB(q, origem){
   if(!q||q.length<2) return [];
   const t=norm(q);
+  const isNum = /^\d+$/.test(q.trim()); // check if searching by code
   if(origem){
     const data = estoqueData[origem]||{};
     const keys = Object.keys(data);
 
-    // Products from estoque (active only)
+    // Products from estoque (active only) - search by name OR code
     const estoqueItems = keys.length>0
       ? Object.values(data)
-          .filter(item => item && item.n && item.ativo !== false && norm(item.n).includes(t))
+          .filter(item => item && item.n && item.ativo !== false &&
+            (norm(item.n).includes(t) || (isNum && String(item.c||'').includes(q.trim()))))
           .map(item => ({c: item.c||0, n: item.n, u: item.u||'UN'}))
       : [];
 
     // Always add limpeza products from global DB that match
     const limpezaItems = DB.filter(i =>
-      LIMPEZA_LIVRE.has(i.n.toUpperCase()) && norm(i.n).includes(t)
+      LIMPEZA_LIVRE.has(i.n.toUpperCase()) &&
+      (norm(i.n).includes(t) || (isNum && String(i.c||'').includes(q.trim())))
     );
 
     // Merge: estoque items first, then limpeza not already in estoque
@@ -720,7 +723,8 @@ function searchDB(q, origem){
     return [...estoqueItems, ...limpezaExtra].slice(0,10);
   }
   // No estoque selected - only show limpeza products
-  return DB.filter(i=>LIMPEZA_LIVRE.has(i.n.toUpperCase())&&norm(i.n).includes(t)).slice(0,8);
+  return DB.filter(i=>LIMPEZA_LIVRE.has(i.n.toUpperCase())&&
+    (norm(i.n).includes(t)||(isNum&&String(i.c||'').includes(q.trim())))).slice(0,8);
 }
 
 let urgency='m', itemCount=0, currentDetail=null, editingId=null;
@@ -1739,7 +1743,7 @@ function renderConsulta(){
   if(!sel){list.innerHTML='';return;}
   const data = estoqueData[sel]||{};
   let items = Object.values(data).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n));
-  if(busca) items = items.filter(i=>i.n.includes(busca));
+  if(busca) items = items.filter(i=>i.n.includes(busca) || String(i.c||'').includes(busca));
   if(!items.length){
     list.innerHTML='<div style="font-size:13px;color:var(--tx2);padding:10px 0">Nenhum produto encontrado.</div>';
     return;
@@ -2087,22 +2091,51 @@ function getRelFiltros(){
 
 function relPosicao(){
   try{
-    const {est,dtIni,dtFim}=getRelFiltros();
+    const {est}=getRelFiltros();
     const estoques=est?[est]:['MASHA ADM','MASHA PIER','LINHA','BAR','CALI CAFÉ'];
     const wb=XLSX.utils.book_new();
+    const now=new Date();
+    const emissao=now.toLocaleDateString('pt-BR')+' '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
     estoques.forEach(nome=>{
       const data=estoqueData[nome];
       if(!data||!Object.keys(data).length) return;
       const items=Object.values(data).filter(i=>i&&i.n).sort((a,b)=>a.n.localeCompare(b.n));
-      const rows=[['POSIÇÃO DE ESTOQUE — '+nome,'','','','',''],['Período',fmtPeriod(dtIni,dtFim),'','','',''],['','','','','',''],['CÓD.','PRODUTO','UNIDADE','SALDO','CUSTO MÉD.','VALOR TOTAL']];
-      items.forEach(it=>{const valor=(it.saldo||0)*(it.custo||0);rows.push([it.c||'',it.n,it.u,it.saldo||0,it.custo||0,valor]);});
+
+      // Formato Gabarito Allfood
+      const rows=[
+        ['Relatório:','Lista para contagem','','','',''],
+        ['Emissão:',emissao,'','','',''],
+        ['Empresa:','CALI CRAVINGS BAR E GRILL','','','',''],
+        ['','','','','',''],
+        ['','Filial: CALI CRAVINGS BAR E GRILL — '+nome,'','','',''],
+        ['Classe:','TODAS','','','',''],
+        ['Sub-Classe:','TODAS','','','',''],
+        ['','','','','',''],
+        ['','','','','',''],
+        ['COD','DESCRIÇÃO','UN','CLASSE','SUB CLASSE','QUANTIDADE'],
+      ];
+
+      items.forEach(it=>{
+        rows.push([
+          it.c||'',
+          it.n,
+          it.u||'UN',
+          'ESTOQUE',
+          nome,
+          it.saldo||0
+        ]);
+      });
+
       const ws=XLSX.utils.aoa_to_sheet(rows);
-      ws['!cols']=[{wch:8},{wch:40},{wch:8},{wch:10},{wch:12},{wch:14}];
+      ws['!cols']=[{wch:8},{wch:40},{wch:8},{wch:16},{wch:16},{wch:12}];
       XLSX.utils.book_append_sheet(wb,ws,nome.slice(0,28));
     });
+
     if(wb.SheetNames.length===0){toast('Nenhum produto cadastrado 📭');return;}
-    XLSX.writeFile(wb,'posicao_estoque_'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.xlsx');
-    toast('Posição exportada 📊');
+    const dateStr=new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+    XLSX.writeFile(wb,'gabarito_allfood_'+dateStr+'.xlsx');
+    toast('Gabarito Allfood exportado 📊');
   }catch(e){toast('Erro: '+e.message);}
 }
 

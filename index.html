@@ -878,8 +878,17 @@ function openDetail(fbKey){
     const btnHtml = isDelivered
       ? `<button class="btn-falta ${falta?'marcado':''}" onclick="toggleFalta(${idx})">${falta?'⚠️ Em falta':'Marcar falta'}</button>`
       : '';
+        // Bolinha de saldo do estoque origem
+    const orig = currentDetail.origem||'';
+    const s = getSaldo(orig, it.n, it.c);
+    let bolinha = '';
+    if(s===null) bolinha = '<span title="Não cadastrado no estoque" style="font-size:10px">⚫</span>';
+    else if(s.saldo<=0) bolinha = '<span title="Saldo zerado" style="font-size:10px">🔴</span>';
+    else if(s.saldo<=5) bolinha = '<span title="Saldo baixo: '+s.saldo+' '+s.u+'" style="font-size:10px">🟠</span>';
+    else bolinha = '<span title="Saldo ok: '+s.saldo+' '+s.u+'" style="font-size:10px">🟢</span>';
+
     return `<div class="item-falta">
-      <span class="${keyClass}">${alertIcon}${it.n}</span>
+      <span class="${keyClass}">${bolinha} ${alertIcon}${it.n}</span>
       <span class="item-falta-val">
         <span class="${qtyClass}">${qtyTxt}</span>
         ${btnHtml}
@@ -919,6 +928,20 @@ function closeDeleteModal(){
 }
 function confirmDelete(){
   const senha=document.getElementById('modal-delete-input').value.trim();
+
+  // Excluir zerado mode
+  if(window._excluirZeradoMode){
+    window._excluirZeradoMode=false;
+    if(senha!=='000813' && senha!=='2202'){
+      document.getElementById('modal-delete-input').value='';
+      document.getElementById('modal-delete-input').focus();
+      toast('Senha incorreta ❌');
+      return;
+    }
+    closeDeleteModal();
+    _confirmarExcluirZerado();
+    return;
+  }
 
   // Zerado edit mode
   if(window._zeradoMode){
@@ -1760,6 +1783,32 @@ function renderConsulta(){
 }
 
 // ---- ZERADOS ----
+function excluirZerado(estoque, cod, nome){
+  window._pendingZerado = {estoque, cod, nome, un:''};
+  window._excluirZeradoMode = true;
+  window._zeradoMode = false;
+  document.getElementById('modal-delete-input').value='';
+  document.getElementById('modal-delete-title').textContent='Excluir produto do estoque';
+  document.getElementById('modal-delete-desc').textContent='Digite a senha gerencial para excluir "'+nome+'" do estoque '+estoque;
+  document.getElementById('modal-delete').classList.add('show');
+  setTimeout(()=>document.getElementById('modal-delete-input').focus(),100);
+}
+
+function _confirmarExcluirZerado(){
+  const {estoque, cod, nome} = window._pendingZerado||{};
+  const data = estoqueData[estoque]||{};
+  let fbKey = null;
+  if(cod && data[cod]) fbKey = cod;
+  if(!fbKey){
+    const found = Object.entries(data).find(([k,v])=>v&&v.n&&v.n.toUpperCase()===nome.toUpperCase());
+    if(found) fbKey = found[0];
+  }
+  if(!fbKey){ toast('Produto não encontrado'); return; }
+  EST_REF.child(estoque).child(fbKey).remove();
+  toast('Produto excluído do estoque ✓');
+  setTimeout(renderZerados, 600);
+}
+
 function atualizarZerado(estoque, cod, nome, un){
   // Ask for password first
   window._pendingZerado = {estoque, cod, nome, un};
@@ -1834,6 +1883,10 @@ function renderZerados(){
         'onclick="atualizarZerado(this.dataset.est,this.dataset.cod,this.dataset.nome,this.dataset.un)" '+
         'style="background:#2C3E35;color:#fff;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0;font-weight:500">'+
         '✏️</button>'+
+        '<button data-est="'+estSafe+'" data-cod="'+codSafe+'" data-nome="'+item.n.replace(/"/g,'')+'" '+
+        'onclick="excluirZerado(this.dataset.est,this.dataset.cod,this.dataset.nome)" '+
+        'style="background:none;border:.5px solid #e24b4a;color:#e24b4a;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;flex-shrink:0;font-weight:500">'+
+        '🗑</button>'+
       '</div>';
     }).join('');
 }

@@ -1,7 +1,7 @@
 {
-  "name": "Cali Cravings — Requisições",
-  "short_name": "Cali Cravings",
-  "description": "App de requisição de insumos Cali Cravings Gastro Bar",
+  "name": "Masha Group — Requisições",
+  "short_name": "Masha Group",
+  "description": "App de requisição de insumos — Masha Group",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

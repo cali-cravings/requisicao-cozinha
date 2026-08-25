@@ -30,6 +30,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 /* HEADER */
 .hdr{background:var(--hd);color:#fff;padding:16px 20px;padding-top:calc(16px + env(safe-area-inset-top));display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
 .hico{width:38px;height:38px;border-radius:50%;background:var(--or);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.hico img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
 .htxt h1{font-size:16px;font-weight:600}
 .htxt p{font-size:12px;opacity:.55;margin-top:1px}
 .back{margin-left:auto;background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;flex-shrink:0;-webkit-tap-highlight-color:transparent}
@@ -266,6 +267,7 @@ if('serviceWorker' in navigator){
   <div class="hdr">
     <div class="hico" style="background:transparent;padding:0;overflow:hidden"><img src="msh-logo.png" style="width:38px;height:38px;object-fit:cover;border-radius:50%"></div>
     <div class="htxt"><h1>Masha Group</h1><p>Requisições</p></div>
+    <div class="hico" id="home-unit-icon" onclick="alternarUnidade()" style="cursor:pointer;margin-left:auto" title="Trocar unidade"></div>
   </div>
   <div class="body">
     <div class="stats">
@@ -335,6 +337,13 @@ if('serviceWorker' in navigator){
     <button class="back" onclick="goTo('s-home')"><i class="ti ti-arrow-left"></i></button>
   </div>
   <div class="body">
+    <div class="card">
+      <label class="fl">Unidade</label>
+      <select id="f-unidade" onchange="filtrarPorUnidade()">
+        <option value="Cali Cravings">Cali Cravings</option>
+        <option value="Texas Country Bar">Texas Country Bar</option>
+      </select>
+    </div>
     <div class="card">
       <label class="fl">Setor solicitante</label>
       <select id="f-setor">
@@ -657,6 +666,15 @@ if('serviceWorker' in navigator){
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
 <script>
+// ---- UNIDADE ATUAL ----
+function getUnidadeAtual(){
+  return localStorage.getItem('unidadeAtual')||'Cali Cravings';
+}
+function salvarUnidadeAtual(u){
+  localStorage.setItem('unidadeAtual',u);
+  atualizarIconeHome();
+}
+
 // ---- FIREBASE CONFIG ----
 const firebaseConfig = {
   apiKey: "AIzaSyDbdgaIEoKn39cjju2IVP83DdP3c1Og6Oo",
@@ -997,6 +1015,8 @@ function editReq(){
   document.querySelector('#s-form .htxt h1').textContent='Editar requisição';
   const bsd=document.getElementById('btn-save-draft');
   if(bsd) bsd.textContent='Atualizar requisição';
+  document.getElementById('f-unidade').value=currentDetail.unidade||'Cali Cravings';
+  filtrarPorUnidade();
   document.getElementById('f-setor').value=currentDetail.setor||'Cozinha';
   document.getElementById('f-nome').value=currentDetail.nome||'';
   document.getElementById('f-origem').value=currentDetail.origem&&currentDetail.origem!=='—'?currentDetail.origem:'';
@@ -1504,9 +1524,68 @@ function saveDraft(){
   editingId=null; goTo('s-home');
 }
 
+function filtrarPorUnidade(){
+  const unidade=document.getElementById('f-unidade').value;
+  const setoresPorUnidade={
+    'Cali Cravings':['Cozinha','Bar','Limpeza','Cali Café','Vitrine Cali'],
+    'Texas Country Bar':['Cozinha','Bar','Limpeza']
+  };
+  const estoquesPorUnidade={
+    'Cali Cravings':['MASHA ADM','MASHA PIER','LINHA','BAR','CALI CAFÉ'],
+    'Texas Country Bar':['MASHA ADM','MASHA PIER','LINHA','BAR']
+  };
+  const setores=setoresPorUnidade[unidade]||setoresPorUnidade['Cali Cravings'];
+  const estoques=estoquesPorUnidade[unidade]||estoquesPorUnidade['Cali Cravings'];
+
+  const selSetor=document.getElementById('f-setor');
+  const setorAtual=selSetor.value;
+  selSetor.innerHTML='';
+  setores.forEach(s=>{
+    const opt=document.createElement('option');
+    opt.value=s; opt.textContent=s;
+    selSetor.appendChild(opt);
+  });
+  selSetor.value=setores.includes(setorAtual)?setorAtual:setores[0];
+
+  ['f-origem','f-destino'].forEach(id=>{
+    const sel=document.getElementById(id);
+    const atual=sel.value;
+    sel.innerHTML='';
+    const optVazia=document.createElement('option');
+    optVazia.value=''; optVazia.textContent='Selecione';
+    sel.appendChild(optVazia);
+    estoques.forEach(e=>{
+      const opt=document.createElement('option');
+      opt.value=e; opt.textContent=e;
+      sel.appendChild(opt);
+    });
+    sel.value=estoques.includes(atual)?atual:'';
+  });
+
+  salvarUnidadeAtual(unidade);
+  atualizarIconeHome();
+}
+
+function atualizarIconeHome(){
+  const el=document.getElementById('home-unit-icon');
+  if(!el) return;
+  const unidade=getUnidadeAtual();
+  if(unidade==='Texas Country Bar'){
+    el.innerHTML='<img src="icon-texas.png" alt="Texas Country Bar">';
+  }else{
+    el.innerHTML='<img src="icon-cali.png" alt="Cali Cravings">';
+  }
+}
+function alternarUnidade(){
+  const atual=getUnidadeAtual();
+  const nova=atual==='Cali Cravings'?'Texas Country Bar':'Cali Cravings';
+  salvarUnidadeAtual(nova);
+}
+
 function mkReq(items,status){
   return{
     ts:Date.now(),
+    unidade:document.getElementById('f-unidade').value,
     setor:document.getElementById('f-setor').value,
     origem:document.getElementById('f-origem').value||'—',
     destino:document.getElementById('f-destino').value||'—',
@@ -1524,6 +1603,8 @@ function initForm(){
   document.querySelector('#s-form .htxt h1').textContent='Nova requisição';
   const bsd=document.getElementById('btn-save-draft');if(bsd) bsd.textContent='Salvar como rascunho';
   ['f-nome','f-obs','f-origem','f-destino'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-unidade').value=getUnidadeAtual();
+  filtrarPorUnidade();
   document.getElementById('f-data').value='';
   document.getElementById('f-data').min=new Date().toISOString().split('T')[0];
   document.getElementById('items-list').innerHTML='';
@@ -2358,6 +2439,7 @@ function exportMes(mes,ano){
 }
 
 
+atualizarIconeHome();
 initFirebase();
 </script>
 </body>

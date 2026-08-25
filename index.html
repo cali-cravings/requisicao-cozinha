@@ -380,10 +380,7 @@ if('serviceWorker' in navigator){
   <div class="body">
     <div class="card">
       <label class="fl">Unidade</label>
-      <select id="f-unidade" onchange="filtrarPorUnidade()">
-        <option value="Cali Cravings">Cali Cravings</option>
-        <option value="Texas Country Bar">Texas Country Bar</option>
-      </select>
+      <div id="f-unidade-display" style="background:var(--surf2);border:.5px solid var(--bdr);border-radius:var(--rs);padding:12px 13px;font-size:15px;color:var(--tx)"></div>
     </div>
     <div class="card">
       <label class="fl">Setor solicitante</label>
@@ -729,16 +726,6 @@ function escolherUnidade(unidade){
   goTo('s-home');
 }
 
-// ---- BOOT: pular tela de seleção se o dispositivo já escolheu unidade ----
-(function initTelaInicial(){
-  const jaEscolheu = localStorage.getItem('unidadeAtual');
-  if(jaEscolheu){
-    document.getElementById('s-unidade').classList.remove('active');
-    document.getElementById('s-home').classList.add('active');
-    aplicarTemaUnidade();
-  }
-})();
-
 // ---- FIREBASE CONFIG ----
 const firebaseConfig = {
   apiKey: "AIzaSyDbdgaIEoKn39cjju2IVP83DdP3c1Og6Oo",
@@ -1082,8 +1069,7 @@ function editReq(){
   document.querySelector('#s-form .htxt h1').textContent='Editar requisição';
   const bsd=document.getElementById('btn-save-draft');
   if(bsd) bsd.textContent='Atualizar requisição';
-  document.getElementById('f-unidade').value=currentDetail.unidade||'Cali Cravings';
-  filtrarPorUnidade();
+  filtrarPorUnidade(currentDetail.unidade||'Cali Cravings');
   document.getElementById('f-setor').value=currentDetail.setor||'Cozinha';
   document.getElementById('f-nome').value=currentDetail.nome||'';
   document.getElementById('f-origem').value=currentDetail.origem&&currentDetail.origem!=='—'?currentDetail.origem:'';
@@ -1591,8 +1577,9 @@ function saveDraft(){
   editingId=null; goTo('s-home');
 }
 
-function filtrarPorUnidade(){
-  const unidade=document.getElementById('f-unidade').value;
+function filtrarPorUnidade(unidadeOverride){
+  const unidade=unidadeOverride||getUnidadeAtual();
+  document.getElementById('f-unidade-display').textContent=unidade;
   const setoresPorUnidade={
     'Cali Cravings':['Cozinha','Bar','Limpeza','Cali Café','Vitrine Cali'],
     'Texas Country Bar':['Cozinha','Bar','Limpeza']
@@ -1655,7 +1642,7 @@ function alternarUnidade(){
 function mkReq(items,status){
   return{
     ts:Date.now(),
-    unidade:document.getElementById('f-unidade').value,
+    unidade:getUnidadeAtual(),
     setor:document.getElementById('f-setor').value,
     origem:document.getElementById('f-origem').value||'—',
     destino:document.getElementById('f-destino').value||'—',
@@ -1673,7 +1660,6 @@ function initForm(){
   document.querySelector('#s-form .htxt h1').textContent='Nova requisição';
   const bsd=document.getElementById('btn-save-draft');if(bsd) bsd.textContent='Salvar como rascunho';
   ['f-nome','f-obs','f-origem','f-destino'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('f-unidade').value=getUnidadeAtual();
   filtrarPorUnidade();
   document.getElementById('f-data').value='';
   document.getElementById('f-data').min=new Date().toISOString().split('T')[0];

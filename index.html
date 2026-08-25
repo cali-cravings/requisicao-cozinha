@@ -28,7 +28,23 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .screen.active{display:flex}
 
 /* HEADER */
+.unit-select{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:32px 24px;text-align:center}
+.unit-select .hico{width:64px;height:64px;background:transparent}
+.unit-select .hico img{width:64px;height:64px;object-fit:contain;border-radius:50%}
+.unit-select h1{font-size:19px;font-weight:700;margin-top:10px;color:var(--tx)}
+.unit-select p{font-size:13px;color:var(--tx2);margin-top:4px;margin-bottom:14px}
+.unit-cards{display:flex;flex-direction:column;gap:14px;width:100%;max-width:340px}
+.unit-card{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--r);border:1.5px solid var(--bdr2);background:var(--surf);cursor:pointer;-webkit-tap-highlight-color:transparent;text-align:left;width:100%;font-family:inherit}
+.unit-card:active{opacity:.85}
+.unit-card img{width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.unit-card .unit-nm{font-size:15px;font-weight:600;color:var(--tx)}
+.unit-card .unit-sub{font-size:11px;color:var(--tx2);margin-top:2px}
+.unit-card.unit-cali{border-color:#1d9e75;background:var(--gr-l)}
+.unit-card.unit-texas{border-color:#7A1F1F;background:#f8e6e6}
+
 .hdr{background:var(--hd);color:#fff;padding:16px 20px;padding-top:calc(16px + env(safe-area-inset-top));display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+body.tema-texas .hdr{background:#7A1F1F}
+body.tema-cali .hdr{background:var(--hd)}
 .hico{width:38px;height:38px;border-radius:50%;background:var(--or);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
 .hico img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
 .htxt h1{font-size:16px;font-weight:600}
@@ -262,8 +278,33 @@ if('serviceWorker' in navigator){
 <body>
 <div id="app">
 
+<!-- SELECAO DE UNIDADE -->
+<div class="screen active" id="s-unidade">
+  <div class="unit-select">
+    <div class="hico"><img src="msh-logo.png" alt="Masha Group"></div>
+    <h1>Selecione sua unidade</h1>
+    <p>Escolha a unidade em que você está trabalhando agora</p>
+    <div class="unit-cards">
+      <button type="button" class="unit-card unit-cali" onclick="escolherUnidade('Cali Cravings')">
+        <img src="icon-cali.png" alt="Cali Cravings">
+        <div>
+          <div class="unit-nm">Cali Cravings</div>
+          <div class="unit-sub">Toque para entrar</div>
+        </div>
+      </button>
+      <button type="button" class="unit-card unit-texas" onclick="escolherUnidade('Texas Country Bar')">
+        <img src="icon-texas.png" alt="Texas Country Bar">
+        <div>
+          <div class="unit-nm">Texas Country Bar</div>
+          <div class="unit-sub">Toque para entrar</div>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- HOME -->
-<div class="screen active" id="s-home">
+<div class="screen" id="s-home">
   <div class="hdr">
     <div class="hico" style="background:transparent;padding:0;overflow:hidden"><img src="msh-logo.png" style="width:38px;height:38px;object-fit:cover;border-radius:50%"></div>
     <div class="htxt"><h1>Masha Group</h1><p>Requisições</p></div>
@@ -673,6 +714,19 @@ function getUnidadeAtual(){
 function salvarUnidadeAtual(u){
   localStorage.setItem('unidadeAtual',u);
   atualizarIconeHome();
+}
+
+function aplicarTemaUnidade(){
+  const unidade=getUnidadeAtual();
+  document.body.classList.toggle('tema-texas', unidade==='Texas Country Bar');
+  document.body.classList.toggle('tema-cali', unidade!=='Texas Country Bar');
+  atualizarIconeHome();
+}
+
+function escolherUnidade(unidade){
+  salvarUnidadeAtual(unidade);
+  aplicarTemaUnidade();
+  goTo('s-home');
 }
 
 // ---- FIREBASE CONFIG ----
@@ -1567,6 +1621,7 @@ function filtrarPorUnidade(){
 
   salvarUnidadeAtual(unidade);
   atualizarIconeHome();
+  aplicarTemaUnidade();
 }
 
 function atualizarIconeHome(){
@@ -1583,6 +1638,7 @@ function alternarUnidade(){
   const atual=getUnidadeAtual();
   const nova=atual==='Cali Cravings'?'Texas Country Bar':'Cali Cravings';
   salvarUnidadeAtual(nova);
+  aplicarTemaUnidade();
   renderHome();
 }
 
@@ -2444,6 +2500,7 @@ function exportMes(mes,ano){
 
 
 atualizarIconeHome();
+aplicarTemaUnidade();
 initFirebase();
 </script>
 </body>

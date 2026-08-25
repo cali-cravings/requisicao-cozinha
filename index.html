@@ -306,9 +306,9 @@ if('serviceWorker' in navigator){
 <!-- HOME -->
 <div class="screen" id="s-home">
   <div class="hdr">
-    <div class="hico" style="background:transparent;padding:0;overflow:hidden"><img src="msh-logo.png" style="width:38px;height:38px;object-fit:cover;border-radius:50%"></div>
+    <div class="hico" onclick="goTo('s-unidade')" style="cursor:pointer;background:transparent;padding:0;overflow:hidden"><img src="msh-logo.png" style="width:38px;height:38px;object-fit:cover;border-radius:50%"></div>
     <div class="htxt"><h1>Masha Group</h1><p>Requisições</p></div>
-    <div class="hico" id="home-unit-icon" onclick="alternarUnidade()" style="cursor:pointer;margin-left:auto" title="Trocar unidade"></div>
+    <div class="hico" id="home-unit-icon" style="margin-left:auto"></div>
   </div>
   <div class="body">
     <div class="stats">
@@ -728,6 +728,16 @@ function escolherUnidade(unidade){
   aplicarTemaUnidade();
   goTo('s-home');
 }
+
+// ---- BOOT: pular tela de seleção se o dispositivo já escolheu unidade ----
+(function initTelaInicial(){
+  const jaEscolheu = localStorage.getItem('unidadeAtual');
+  if(jaEscolheu){
+    document.getElementById('s-unidade').classList.remove('active');
+    document.getElementById('s-home').classList.add('active');
+    aplicarTemaUnidade();
+  }
+})();
 
 // ---- FIREBASE CONFIG ----
 const firebaseConfig = {

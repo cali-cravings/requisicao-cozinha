@@ -812,10 +812,13 @@ function toast(msg){
 // ---- HOME ----
 function renderHome(){
   const today=new Date().toDateString();
+  // Filtra apenas as requisições da unidade ativa (escopo: SOMENTE home; demais telas/exportações usam allReqs completo)
+  const unidadeAtiva=getUnidadeAtual();
+  const reqsUnidade=allReqs.filter(r=>(r.unidade||'Cali Cravings')===unidadeAtiva);
   // Pendentes = pending + sent (em aberto, ainda não entregue)
-  document.getElementById('cnt-p').textContent=allReqs.filter(r=>r.status==='pending'||r.status==='sent').length;
+  document.getElementById('cnt-p').textContent=reqsUnidade.filter(r=>r.status==='pending'||r.status==='sent').length;
   // Enviadas hoje = delivered hoje (entregues)
-  document.getElementById('cnt-s').textContent=allReqs.filter(r=>r.status==='delivered'&&new Date(r.ts).toDateString()===today).length;
+  document.getElementById('cnt-s').textContent=reqsUnidade.filter(r=>r.status==='delivered'&&new Date(r.ts).toDateString()===today).length;
 
   // Alert stored for use in renderHome list
   window._zerados = [];
@@ -838,12 +841,12 @@ function renderHome(){
     '</div>';
   }
 
-  if(!allReqs.length){
+  if(!reqsUnidade.length){
     list.innerHTML=alertItem+'<div class="empty"><i class="ti ti-clipboard-list"></i>Nenhuma requisição ainda.<br>Crie a primeira!</div>';
     return;
   }
   const stMap={pending:{cls:'bp',lb:'Pendente'},sent:{cls:'bs',lb:'Enviada'},delivered:{cls:'bd',lb:'Entregue'}};
-  list.innerHTML=alertItem+allReqs.map(r=>{
+  list.innerHTML=alertItem+reqsUnidade.map(r=>{
     try{
     const st=stMap[r.status]||stMap.sent;
     const temFalta=(r.items||[]).some(it=>it.falta===true);
@@ -1580,6 +1583,7 @@ function alternarUnidade(){
   const atual=getUnidadeAtual();
   const nova=atual==='Cali Cravings'?'Texas Country Bar':'Cali Cravings';
   salvarUnidadeAtual(nova);
+  renderHome();
 }
 
 function mkReq(items,status){

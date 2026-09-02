@@ -399,7 +399,12 @@ if('serviceWorker' in navigator){
 <div class="clb">QUANTIDADE A TRANSFERIR</div>
 <div style="display:flex;gap:8px;align-items:center">
 <input id="tr-qtd" type="number" class="finp" min="0" step="0.5" placeholder="0" style="flex:1;margin:0">
-<span id="tr-qtd-un" style="font-weight:600;color:var(--tx2);min-width:34px;text-align:center"></span>
+<select id="tr-qtd-un" class="finp" style="flex:0 0 92px;margin:0">
+<option>UN</option><option>KG</option><option>G</option><option>L</option>
+<option>ML</option><option>CX</option><option>FD</option><option>PC</option>
+<option>PT</option><option>BD</option><option>DZ</option><option>BR</option>
+<option>SACO</option><option>LATA</option>
+</select>
 </div>
 </div>
 <div class="card">
@@ -804,7 +809,7 @@ function trResetProduto(){
   document.getElementById('tr-busca').value='';
   document.getElementById('tr-sug').innerHTML='';
   document.getElementById('tr-selecionado').style.display='none';
-  document.getElementById('tr-qtd-un').textContent='';
+  document.getElementById('tr-qtd-un').value='UN';
 }
 function renderTransfSug(){
   const [origem]=document.getElementById('tr-direcao').value.split('|');
@@ -831,7 +836,9 @@ function selecionarTransfProduto(key,v){
   document.getElementById('tr-selecionado').style.display='block';
   document.getElementById('tr-sel-nome').textContent=v.n;
   document.getElementById('tr-sel-saldo').textContent='Saldo disponível: '+(v.saldo||0)+' '+(v.u||'');
-  document.getElementById('tr-qtd-un').textContent=v.u||'';
+  const trUnSel=document.getElementById('tr-qtd-un');
+  const trUnVal=(v.u||'').toUpperCase();
+  if([...trUnSel.options].some(o=>o.value===trUnVal)) trUnSel.value=trUnVal;
 }
 function confirmarTransferencia(){
   const [origem,destino]=document.getElementById('tr-direcao').value.split('|');
@@ -855,11 +862,12 @@ function confirmarTransferencia(){
   if(!destKey) destKey=_trSel.key;
   const destItem=destData[destKey]||{};
   const saldoDestAtual=destItem.saldo||0;
+  const unEscolhida=document.getElementById('tr-qtd-un').value||_trSel.un||'UN';
   EST_REF.child(destino).child(destKey).update({
-    n:_trSel.nome, u:_trSel.un||destItem.u||'UN', c:_trSel.cod||destItem.c||'', saldo: saldoDestAtual+qtd
+    n:_trSel.nome, u:unEscolhida, c:_trSel.cod||destItem.c||'', saldo: saldoDestAtual+qtd
   });
   db.ref('transferencias').push({
-    origem, destino, produto:_trSel.nome, cod:_trSel.cod||'', un:_trSel.un||'',
+    origem, destino, produto:_trSel.nome, cod:_trSel.cod||'', un:unEscolhida,
     qtd, nome, unidade:getUnidadeAtual(), ts:Date.now()
   });
   toast('✅ Transferido '+qtd+' '+(_trSel.un||'')+' de '+origem+' para '+destino);

@@ -390,7 +390,7 @@ if('serviceWorker' in navigator){
 </div>
 <div class="card">
 <div class="clb">PRODUTO</div>
-<input id="tr-busca" type="text" class="finp" placeholder="Buscar produto..." oninput="renderTransfSug()" autocomplete="off">
+<input id="tr-busca" type="text" class="finp" placeholder="Buscar produto cadastrado ou digitar um novo..." oninput="renderTransfSug()" autocomplete="off">
 <div id="tr-sug" style="max-height:220px;overflow-y:auto"></div>
 <div id="tr-selecionado" style="display:none;margin-top:10px;padding:10px 12px;background:var(--surf2);border-radius:8px">
 <div id="tr-sel-nome" style="font-weight:600;font-size:14px"></div>
@@ -829,7 +829,7 @@ function renderTransfSug(){
   if(!busca) return;
   const data=estoqueData[origem]||{};
   const matches=Object.entries(data).filter(([k,v])=>norm(v.n||'').includes(busca)).slice(0,20);
-  if(!matches.length){ sugDiv.innerHTML='<div style="padding:10px;font-size:13px;color:var(--tx2)">Nenhum produto encontrado em '+origem+'</div>'; return; }
+  if(!matches.length){ sugDiv.innerHTML='<div style="padding:10px;font-size:13px;color:var(--tx2)">Nenhum produto cadastrado com esse nome em '+origem+'. Pode continuar — será criado como item novo.</div>'; return; }
   matches.forEach(([k,v])=>{
     const div=document.createElement('div');
     div.className='sug-item';
@@ -852,7 +852,8 @@ function selecionarTransfProduto(key,v){
 }
 function confirmarTransferencia(){
   const [origem,destino]=document.getElementById('tr-direcao').value.split('|');
-  if(!_trSel){ toast('⚠️ Selecione um produto'); return; }
+  const nomeDigitado=(document.getElementById('tr-busca').value||'').trim();
+  if(!nomeDigitado){ toast('⚠️ Digite o nome do produto'); return; }
   const qtd=parseFloat(document.getElementById('tr-qtd').value);
   if(!qtd||qtd<=0){ toast('⚠️ Informe uma quantidade válida'); return; }
   const nome=document.getElementById('tr-nome').value.trim();
@@ -860,27 +861,53 @@ function confirmarTransferencia(){
   const senha=document.getElementById('tr-senha').value.trim();
   const senhas=['127127','128128','129129','130130'];
   if(!senhas.includes(senha)){ toast('Senha incorreta ❌'); return; }
+  const unEscolhida=document.getElementById('tr-qtd-un').value||'UN';
   const origData=estoqueData[origem]||{};
-  const origItem=origData[_trSel.key]||{};
-  const saldoAtual=origItem.saldo||0;
-  if(qtd>saldoAtual){ toast('⚠️ Saldo insuficiente em '+origem+' ('+saldoAtual+' disponível)'); return; }
-  const novoSaldoOrigem=Math.max(0,saldoAtual-qtd);
-  EST_REF.child(origem).child(_trSel.key).update({saldo:novoSaldoOrigem});
-  const destData=estoqueData[destino]||{};
-  let destKey=null;
-  Object.entries(destData).forEach(([k,v])=>{ if((v.n||'').toUpperCase()===(_trSel.nome||'').toUpperCase()) destKey=k; });
-  if(!destKey) destKey=_trSel.key;
-  const destItem=destData[destKey]||{};
-  const saldoDestAtual=destItem.saldo||0;
-  const unEscolhida=document.getElementById('tr-qtd-un').value||_trSel.un||'UN';
-  EST_REF.child(destino).child(destKey).update({
-    n:_trSel.nome, u:unEscolhida, c:_trSel.cod||destItem.c||'', saldo: saldoDestAtual+qtd
-  });
-  db.ref('transferencias').push({
-    origem, destino, produto:_trSel.nome, cod:_trSel.cod||'', un:unEscolhida,
-    qtd, nome, unidade:getUnidadeAtual(), ts:Date.now()
-  });
-  toast('✅ Transferido '+qtd+' '+(_trSel.un||'')+' de '+origem+' para '+destino);
+  let origKey=null;
+  Object.entries(origData).forEach(([k,v])=>{ if(norm(v.n||'')===norm(nomeDigitado)) origKey=k; });
+
+  if(origKey){
+    const origItem=origData[origKey];
+    const saldoAtual=origItem.saldo||0;
+    if(qtd>saldoAtual){ toast('⚠️ Saldo insuficiente em '+origem+' ('+saldoAtual+' disponível)'); return; }
+    const novoSaldoOrigem=Math.max(0,saldoAtual-qtd);
+    EST_REF.child(origem).child(origKey).update({saldo:novoSaldoOrigem});
+    const destData=estoqueData[destino]||{};
+    let destKey=null;
+    Object.entries(destData).forEach(([k,v])=>{ if(norm(v.n||'')===norm(origItem.n)) destKey=k; });
+    if(!destKey) destKey=origKey;
+    const destItem=destData[destKey]||{};
+    const saldoDestAtual=destItem.saldo||0;
+    EST_REF.child(destino).child(destKey).update({
+      n:origItem.n, u:unEscolhida, c:origItem.c||destItem.c||'', saldo: saldoDestAtual+qtd
+    });
+    db.ref('transferencias').push({
+      origem, destino, produto:origItem.n, cod:origItem.c||'', un:unEscolhida,
+      qtd, nome, unidade:getUnidadeAtual(), ts:Date.now(), tipo:'transferencia'
+    });
+    toast('✅ Transferido '+qtd+' '+unEscolhida+' de '+origem+' para '+destino);
+  } else {
+    const nomeNovo=nomeDigitado.toUpperCase();
+    const destData=estoqueData[destino]||{};
+    let destKey=null;
+    Object.entries(destData).forEach(([k,v])=>{ if(norm(v.n||'')===norm(nomeNovo)) destKey=k; });
+    if(!destKey){
+      const baseKey=nomeNovo.replace(/[^A-Z0-9]/g,'_').slice(0,20)||'ITEM';
+      destKey=baseKey;
+      let n=2;
+      while(destData[destKey]){ destKey=baseKey+'_'+(n++); }
+    }
+    const destItem=destData[destKey]||{};
+    const saldoDestAtual=destItem.saldo||0;
+    EST_REF.child(destino).child(destKey).update({
+      n:nomeNovo, u:unEscolhida, c:destItem.c||'', saldo: saldoDestAtual+qtd
+    });
+    db.ref('transferencias').push({
+      origem, destino, produto:nomeNovo, cod:'', un:unEscolhida,
+      qtd, nome, unidade:getUnidadeAtual(), ts:Date.now(), tipo:'item_novo'
+    });
+    toast('✅ Item novo "'+nomeNovo+'" adicionado em '+destino+' ('+qtd+' '+unEscolhida+')');
+  }
   document.getElementById('tr-qtd').value='';
   document.getElementById('tr-senha').value='';
   trResetProduto();

@@ -320,6 +320,7 @@ if('serviceWorker' in navigator){
     <button class="btn-excel-home" onclick="goTo('s-consulta')" style="border-color:#2C3E35;color:#2C3E35"><i class="ti ti-search"></i> Consultar estoque</button>
     <button class="btn-excel-home" onclick="abrirGestaoEstoque()" style="border-color:#2C3E35;color:#2C3E35"><i class="ti ti-package"></i> Gestão de estoque</button>
 <button class="btn-excel-home" onclick="goTo('s-transferencia')" style="border-color:#185fa5;color:#185fa5"><i class="ti ti-arrows-exchange"></i> Transferir: Linha Cali ⇄ Linha Texas</button>
+<button class="btn-excel-home" onclick="verLinhaTexas()" style="border-color:#1d9e75;color:#1d9e75"><i class="ti ti-eye"></i> Acessar Linha Texas</button>
     <button class="btn-excel-home" onclick="abrirModalMes()"  style="margin-top:-4px"><i class="ti ti-calendar-stats"></i> Exportar consolidado do mês</button>
     <div>
       <div class="sec-l">Requisições recentes</div>
@@ -365,6 +366,7 @@ if('serviceWorker' in navigator){
         <option value="">Selecione o estoque</option>
         <option>MASHA ADM</option>
         <option>MASHA PIER</option>
+        <option>LINHA TEXAS</option>
       </select>
       <input id="cons-busca" type="text" class="finp" placeholder="Buscar produto..." oninput="renderConsulta()" style="margin-bottom:12px" autocomplete="off">
       <div id="cons-list"></div>
@@ -800,6 +802,14 @@ function initEstoque(){
   EST_REF.on('value', snap=>{
     estoqueData = snap.val() || {};
   });
+}
+
+function verLinhaTexas(){
+  goTo('s-consulta');
+  const sel=document.getElementById('cons-sel');
+  sel.value='LINHA TEXAS';
+  document.getElementById('cons-busca').value='';
+  renderConsulta();
 }
 
 // ---- TRANSFERÊNCIA ENTRE UNIDADES (LINHA CALI <-> LINHA TEXAS) ----

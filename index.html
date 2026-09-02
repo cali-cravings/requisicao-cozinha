@@ -397,7 +397,10 @@ if('serviceWorker' in navigator){
 </div>
 <div class="card">
 <div class="clb">QUANTIDADE A TRANSFERIR</div>
-<input id="tr-qtd" type="number" class="finp" min="0" step="0.5" placeholder="0">
+<div style="display:flex;gap:8px;align-items:center">
+<input id="tr-qtd" type="number" class="finp" min="0" step="0.5" placeholder="0" style="flex:1;margin:0">
+<span id="tr-qtd-un" style="font-weight:600;color:var(--tx2);min-width:34px;text-align:center"></span>
+</div>
 </div>
 <div class="card">
 <div class="clb">NOME DE QUEM TRANSFERIU</div>
@@ -801,15 +804,16 @@ function trResetProduto(){
   document.getElementById('tr-busca').value='';
   document.getElementById('tr-sug').innerHTML='';
   document.getElementById('tr-selecionado').style.display='none';
+  document.getElementById('tr-qtd-un').textContent='';
 }
 function renderTransfSug(){
   const [origem]=document.getElementById('tr-direcao').value.split('|');
-  const busca=document.getElementById('tr-busca').value.toUpperCase().trim();
+  const busca=norm(document.getElementById('tr-busca').value.trim());
   const sugDiv=document.getElementById('tr-sug');
   sugDiv.innerHTML='';
   if(!busca) return;
   const data=estoqueData[origem]||{};
-  const matches=Object.entries(data).filter(([k,v])=>(v.n||'').toUpperCase().includes(busca)).slice(0,20);
+  const matches=Object.entries(data).filter(([k,v])=>norm(v.n||'').includes(busca)).slice(0,20);
   if(!matches.length){ sugDiv.innerHTML='<div style="padding:10px;font-size:13px;color:var(--tx2)">Nenhum produto encontrado em '+origem+'</div>'; return; }
   matches.forEach(([k,v])=>{
     const div=document.createElement('div');
@@ -827,6 +831,7 @@ function selecionarTransfProduto(key,v){
   document.getElementById('tr-selecionado').style.display='block';
   document.getElementById('tr-sel-nome').textContent=v.n;
   document.getElementById('tr-sel-saldo').textContent='Saldo disponível: '+(v.saldo||0)+' '+(v.u||'');
+  document.getElementById('tr-qtd-un').textContent=v.u||'';
 }
 function confirmarTransferencia(){
   const [origem,destino]=document.getElementById('tr-direcao').value.split('|');

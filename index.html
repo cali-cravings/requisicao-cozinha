@@ -319,6 +319,7 @@ if('serviceWorker' in navigator){
     <button class="btn-excel-home" onclick="exportConsolidado()"><i class="ti ti-file-spreadsheet"></i> Exportar consolidado do dia</button>
     <button class="btn-excel-home" onclick="goTo('s-consulta')" style="border-color:#2C3E35;color:#2C3E35"><i class="ti ti-search"></i> Consultar estoque</button>
     <button class="btn-excel-home" onclick="abrirGestaoEstoque()" style="border-color:#2C3E35;color:#2C3E35"><i class="ti ti-package"></i> Gestão de estoque</button>
+<button class="btn-excel-home" onclick="goTo('s-transferencia')" style="border-color:#185fa5;color:#185fa5"><i class="ti ti-arrows-exchange"></i> Transferir: Linha Cali ⇄ Linha Texas</button>
     <button class="btn-excel-home" onclick="abrirModalMes()"  style="margin-top:-4px"><i class="ti ti-calendar-stats"></i> Exportar consolidado do mês</button>
     <div>
       <div class="sec-l">Requisições recentes</div>
@@ -340,6 +341,7 @@ if('serviceWorker' in navigator){
         <option>MASHA ADM</option>
         <option>MASHA PIER</option>
         <option>LINHA</option>
+        <option>LINHA TEXAS</option>
         <option>BAR</option>
         <option>CALI CAFÉ</option>
       </select>
@@ -368,6 +370,45 @@ if('serviceWorker' in navigator){
       <div id="cons-list"></div>
     </div>
   </div>
+</div>
+
+<!-- TELA TRANSFERÊNCIA ENTRE UNIDADES -->
+<div class="screen" id="s-transferencia">
+<div class="hdr">
+<button class="hbk" onclick="goTo('s-home')"><i class="ti ti-arrow-left"></i></button>
+<div class="htxt"><h1>Transferência entre unidades</h1><p>Linha Cali ⇄ Linha Texas</p></div>
+</div>
+<div class="pad">
+<div class="card">
+<div class="clb">DIREÇÃO</div>
+<select id="tr-direcao" class="finp" onchange="trResetProduto()">
+<option value="LINHA|LINHA TEXAS">Linha Cali → Linha Texas</option>
+<option value="LINHA TEXAS|LINHA">Linha Texas → Linha Cali</option>
+</select>
+</div>
+<div class="card">
+<div class="clb">PRODUTO</div>
+<input id="tr-busca" type="text" class="finp" placeholder="Buscar produto..." oninput="renderTransfSug()" autocomplete="off">
+<div id="tr-sug" style="max-height:220px;overflow-y:auto"></div>
+<div id="tr-selecionado" style="display:none;margin-top:10px;padding:10px 12px;background:var(--surf2);border-radius:8px">
+<div id="tr-sel-nome" style="font-weight:600;font-size:14px"></div>
+<div id="tr-sel-saldo" style="font-size:12px;color:var(--tx2);margin-top:2px"></div>
+</div>
+</div>
+<div class="card">
+<div class="clb">QUANTIDADE A TRANSFERIR</div>
+<input id="tr-qtd" type="number" class="finp" min="0" step="0.5" placeholder="0">
+</div>
+<div class="card">
+<div class="clb">NOME DE QUEM TRANSFERIU</div>
+<input id="tr-nome" type="text" class="finp" placeholder="Seu nome">
+</div>
+<div class="card">
+<div class="clb">SENHA DE AUTORIZAÇÃO</div>
+<input id="tr-senha" type="password" class="finp" maxlength="10" placeholder="••••••">
+</div>
+<button class="btn-or" style="background:#185fa5" onclick="confirmarTransferencia()"><i class="ti ti-arrows-exchange"></i> Confirmar transferência</button>
+</div>
 </div>
 
 <!-- FORM -->
@@ -590,6 +631,7 @@ if('serviceWorker' in navigator){
         <option>MASHA ADM</option>
         <option>MASHA PIER</option>
         <option>LINHA</option>
+        <option>LINHA TEXAS</option>
         <option>BAR</option>
         <option>CALI CAFÉ</option>
       </select>
@@ -604,6 +646,7 @@ if('serviceWorker' in navigator){
         <option>MASHA ADM</option>
         <option>MASHA PIER</option>
         <option>LINHA</option>
+        <option>LINHA TEXAS</option>
         <option>BAR</option>
         <option>CALI CAFÉ</option>
       </select>
@@ -636,6 +679,7 @@ if('serviceWorker' in navigator){
         <option>MASHA ADM</option>
         <option>MASHA PIER</option>
         <option>LINHA</option>
+        <option>LINHA TEXAS</option>
         <option>BAR</option>
         <option>CALI CAFÉ</option>
       </select>
@@ -652,6 +696,7 @@ if('serviceWorker' in navigator){
         <option>MASHA ADM</option>
         <option>MASHA PIER</option>
         <option>LINHA</option>
+        <option>LINHA TEXAS</option>
         <option>BAR</option>
         <option>CALI CAFÉ</option>
       </select>
@@ -682,6 +727,7 @@ if('serviceWorker' in navigator){
         <option>MASHA ADM</option>
         <option>MASHA PIER</option>
         <option>LINHA</option>
+        <option>LINHA TEXAS</option>
         <option>BAR</option>
         <option>CALI CAFÉ</option>
       </select>
@@ -746,6 +792,75 @@ function initEstoque(){
   EST_REF.on('value', snap=>{
     estoqueData = snap.val() || {};
   });
+}
+
+// ---- TRANSFERÊNCIA ENTRE UNIDADES (LINHA CALI <-> LINHA TEXAS) ----
+let _trSel=null;
+function trResetProduto(){
+  _trSel=null;
+  document.getElementById('tr-busca').value='';
+  document.getElementById('tr-sug').innerHTML='';
+  document.getElementById('tr-selecionado').style.display='none';
+}
+function renderTransfSug(){
+  const [origem]=document.getElementById('tr-direcao').value.split('|');
+  const busca=document.getElementById('tr-busca').value.toUpperCase().trim();
+  const sugDiv=document.getElementById('tr-sug');
+  sugDiv.innerHTML='';
+  if(!busca) return;
+  const data=estoqueData[origem]||{};
+  const matches=Object.entries(data).filter(([k,v])=>(v.n||'').toUpperCase().includes(busca)).slice(0,20);
+  if(!matches.length){ sugDiv.innerHTML='<div style="padding:10px;font-size:13px;color:var(--tx2)">Nenhum produto encontrado em '+origem+'</div>'; return; }
+  matches.forEach(([k,v])=>{
+    const div=document.createElement('div');
+    div.className='sug-item';
+    const saldo=v.saldo||0;
+    div.innerHTML='<span class="sug-nm">'+(v.n||'')+'</span><span class="sug-saldo'+(saldo<=0?' zero':'')+'">'+saldo+' '+(v.u||'')+'</span>';
+    div.onclick=()=>selecionarTransfProduto(k,v);
+    sugDiv.appendChild(div);
+  });
+}
+function selecionarTransfProduto(key,v){
+  _trSel={key,nome:v.n,un:v.u,cod:v.c};
+  document.getElementById('tr-busca').value=v.n;
+  document.getElementById('tr-sug').innerHTML='';
+  document.getElementById('tr-selecionado').style.display='block';
+  document.getElementById('tr-sel-nome').textContent=v.n;
+  document.getElementById('tr-sel-saldo').textContent='Saldo disponível: '+(v.saldo||0)+' '+(v.u||'');
+}
+function confirmarTransferencia(){
+  const [origem,destino]=document.getElementById('tr-direcao').value.split('|');
+  if(!_trSel){ toast('⚠️ Selecione um produto'); return; }
+  const qtd=parseFloat(document.getElementById('tr-qtd').value);
+  if(!qtd||qtd<=0){ toast('⚠️ Informe uma quantidade válida'); return; }
+  const nome=document.getElementById('tr-nome').value.trim();
+  if(!nome){ toast('⚠️ Informe seu nome'); return; }
+  const senha=document.getElementById('tr-senha').value.trim();
+  const senhas=['127127','128128','129129','130130'];
+  if(!senhas.includes(senha)){ toast('Senha incorreta ❌'); return; }
+  const origData=estoqueData[origem]||{};
+  const origItem=origData[_trSel.key]||{};
+  const saldoAtual=origItem.saldo||0;
+  if(qtd>saldoAtual){ toast('⚠️ Saldo insuficiente em '+origem+' ('+saldoAtual+' disponível)'); return; }
+  const novoSaldoOrigem=Math.max(0,saldoAtual-qtd);
+  EST_REF.child(origem).child(_trSel.key).update({saldo:novoSaldoOrigem});
+  const destData=estoqueData[destino]||{};
+  let destKey=null;
+  Object.entries(destData).forEach(([k,v])=>{ if((v.n||'').toUpperCase()===(_trSel.nome||'').toUpperCase()) destKey=k; });
+  if(!destKey) destKey=_trSel.key;
+  const destItem=destData[destKey]||{};
+  const saldoDestAtual=destItem.saldo||0;
+  EST_REF.child(destino).child(destKey).update({
+    n:_trSel.nome, u:_trSel.un||destItem.u||'UN', c:_trSel.cod||destItem.c||'', saldo: saldoDestAtual+qtd
+  });
+  db.ref('transferencias').push({
+    origem, destino, produto:_trSel.nome, cod:_trSel.cod||'', un:_trSel.un||'',
+    qtd, nome, unidade:getUnidadeAtual(), ts:Date.now()
+  });
+  toast('✅ Transferido '+qtd+' '+(_trSel.un||'')+' de '+origem+' para '+destino);
+  document.getElementById('tr-qtd').value='';
+  document.getElementById('tr-senha').value='';
+  trResetProduto();
 }
 
 
@@ -1586,7 +1701,7 @@ function filtrarPorUnidade(unidadeOverride){
   };
   const estoquesPorUnidade={
     'Cali Cravings':['MASHA ADM','MASHA PIER','LINHA','BAR','CALI CAFÉ'],
-    'Texas Country Bar':['MASHA ADM','MASHA PIER','LINHA','BAR']
+    'Texas Country Bar':['MASHA ADM','MASHA PIER','LINHA TEXAS','BAR']
   };
   const setores=setoresPorUnidade[unidade]||setoresPorUnidade['Cali Cravings'];
   const estoques=estoquesPorUnidade[unidade]||estoquesPorUnidade['Cali Cravings'];
